@@ -1,4 +1,5 @@
 import { generateText } from "ai"
+import { openai } from "@ai-sdk/openai"
 import knowledgeBase from "@/wsgvr_chatbot_knowledge.json"
 import personnelData from "@/wsgvr_personnel_2015_2024.json"
 
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     const { messages } = await request.json()
 
     const response = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: openai("gpt-4o-mini"),
       system: buildSystemPrompt(),
       messages,
     })
