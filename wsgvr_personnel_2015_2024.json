@@ -1,0 +1,404 @@
+{
+  "type": "personnel",
+  "scope": "past_officers_and_awards",
+  "last_verified": "2025-11-06",
+  "sources": [
+    "https://www.wsgvr.org/past-presidents/",
+    "https://www.wsgvr.org/award-recipients/",
+    "https://www.wsgvr.org/2024-board-of-directors/"
+  ],
+  "leadership": [
+    {
+      "year": 2024,
+      "president": {
+        "name": "Ling Chow",
+        "bio": "Licensed since 1995; WSGVR President in 2010 and 2024; led WSGVR\u2019s first Trade Mission to Taiwan; C.A.R. Director since 2005; NAR Director since 2022; CIPS; 2011 WSGVR REALTOR\u00ae of the Year.",
+        "bio_sources": [
+          "https://www.wsgvr.org/2024-board-of-directors/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2023,
+      "president": {
+        "name": "Ling Chow",
+        "bio": "WSGVR Past President (2010) and again in 2023\u20132024; long\u2011standing leadership roles at C.A.R. and NAR; international/trade mission leader (Taiwan).",
+        "bio_sources": [
+          "https://www.wsgvr.org/2024-board-of-directors/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2022,
+      "president": {
+        "name": "Brian Chen",
+        "bio": "Began real estate career in 1989; former President & CEO of Multi\u2011Regional MLS (now CRMLS); GRI and zipForm\u00ae instructor; Broker/Manager at Pinnacle Real Estate Group; fluent in English and Mandarin.",
+        "bio_sources": [
+          "https://www.wsgvr.org/2024-board-of-directors/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2021,
+      "president": {
+        "name": "Mindy Yeh",
+        "bio": "WSGVR President in 2021 and 2020; active in association leadership and community (see also Distinguished Service 2021, REALTOR\u00ae of the Year 2024).",
+        "bio_sources": [
+          "https://www.wsgvr.org/past-presidents/",
+          "https://www.wsgvr.org/award-recipients/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2020,
+      "president": {
+        "name": "Mindy Yeh",
+        "bio": "Two\u2011term WSGVR President (2020\u20132021).",
+        "bio_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2019,
+      "president": {
+        "name": "Giuseppe (Vince) Veneziano",
+        "bio": "Long\u2011time WSGVR leader; later recognized as REALTOR\u00ae of the Year (2022) and Lifetime Achievement (2019).",
+        "bio_sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2018,
+      "president": {
+        "name": "Helen Marston",
+        "bio": "Past President (2018); recipient of multiple WSGVR awards including Good Neighbor (2016) and REALTOR\u00ae of the Year (2018).",
+        "bio_sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2017,
+      "president": {
+        "name": "Suzi Dunkel\u2011Soto",
+        "bio": "Past President (2017); WSGVR Good Neighbor (2015); REALTOR\u00ae of the Year (2016).",
+        "bio_sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2016,
+      "president": {
+        "name": "Kevin Kwan",
+        "bio": "Past President (2016); Distinguished Service Award (2015); REALTOR\u00ae of the Year (2017).",
+        "bio_sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    },
+    {
+      "year": 2015,
+      "president": {
+        "name": "Tom Berge, Jr.",
+        "bio": "Past President (2015); President\u2019s Award recipient (2013); Special Recognition (2018).",
+        "bio_sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ],
+        "proof_sources": [
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      }
+    }
+  ],
+  "awards": {
+    "REALTOR_of_the_Year": [
+      {
+        "year": 2024,
+        "recipient": "Mindy Yeh",
+        "bio": "WSGVR President 2020\u20132021; Distinguished Service 2021.",
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/",
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      },
+      {
+        "year": 2023,
+        "recipient": "Nanette Ong",
+        "bio": "WSGVR Board Director; committee leader (Legislative, MLS/Tech, Membership/Special Events, Diversity).",
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/",
+          "https://www.wsgvr.org/2024-board-of-directors/"
+        ]
+      },
+      {
+        "year": 2022,
+        "recipient": "Vince (Giuseppe) Veneziano",
+        "bio": "WSGVR President 2019; Lifetime Achievement 2019; long\u2011time committee leader.",
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/",
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      },
+      {
+        "year": 2021,
+        "recipient": "Karen Kuit",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2020,
+        "recipient": "Nancy Lin",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2019,
+        "recipient": "Giuseppe (Vince) Veneziano",
+        "bio": "WSGVR President 2019; Lifetime Achievement 2019.",
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/",
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      },
+      {
+        "year": 2018,
+        "recipient": "Helen Marston",
+        "bio": "WSGVR President 2018; Good Neighbor 2016.",
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/",
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      },
+      {
+        "year": 2017,
+        "recipient": "Kevin Kwan",
+        "bio": "WSGVR President 2016; Distinguished Service 2015.",
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/",
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      },
+      {
+        "year": 2016,
+        "recipient": "Suzi Dunkel\u2011Soto",
+        "bio": "WSGVR President 2017; Good Neighbor 2015.",
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/",
+          "https://www.wsgvr.org/past-presidents/"
+        ]
+      },
+      {
+        "year": 2015,
+        "recipient": "Gigi Lee",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      }
+    ],
+    "Affiliate_of_the_Year": [
+      {
+        "year": 2024,
+        "recipient": "Leena Sankary",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2023,
+        "recipient": "Chris Haun",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2022,
+        "recipient": "Sage Gomez",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2021,
+        "recipient": "Brandon Savransky",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2020,
+        "recipient": "Cosmo Sanchez",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2019,
+        "recipient": "Alina Chu",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2018,
+        "recipient": "Richard Zaleta",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2017,
+        "recipient": "Annie Fan",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2016,
+        "recipient": "Oriana Chan",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2015,
+        "recipient": "Joseph Haggerty",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      }
+    ],
+    "Distinguished_Service_Award": [
+      {
+        "year": 2024,
+        "recipient": "Joleen Tu",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2023,
+        "recipient": "Nee Wong",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2022,
+        "recipient": "Lorraine Clark",
+        "bio": "C.A.R. Director for Life; past CRMLS President (2009); WSGVR REALTOR\u00ae of the Year 2007.",
+        "sources": [
+          "https://www.wsgvr.org/2024-board-of-directors/",
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2021,
+        "recipient": "Mindy Yeh",
+        "bio": "WSGVR President 2020\u20132021.",
+        "sources": [
+          "https://www.wsgvr.org/past-presidents/",
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2020,
+        "recipient": "Ling Chow",
+        "bio": "WSGVR President 2010 & 2023\u20112024; CIPS; C.A.R. & NAR leadership.",
+        "sources": [
+          "https://www.wsgvr.org/2024-board-of-directors/",
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2019,
+        "recipient": "Karla Joseph",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2018,
+        "recipient": "Nicholas Baldry",
+        "bio": null,
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2017,
+        "recipient": "Thomas O. Berge",
+        "bio": "Also WSGVR President 1975; Lifetime Achievement 2015 & 2005.",
+        "sources": [
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2016,
+        "recipient": "Brian Chen",
+        "bio": "WSGVR President 2022 & 2000; former MRMLS (now CRMLS) President & CEO; Broker/Manager at Pinnacle Real Estate Group.",
+        "sources": [
+          "https://www.wsgvr.org/2024-board-of-directors/",
+          "https://www.wsgvr.org/past-presidents/",
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      },
+      {
+        "year": 2015,
+        "recipient": "Kevin Kwan",
+        "bio": "WSGVR President 2016; REALTOR\u00ae of the Year 2017.",
+        "sources": [
+          "https://www.wsgvr.org/past-presidents/",
+          "https://www.wsgvr.org/award-recipients/"
+        ]
+      }
+    ]
+  }
+}

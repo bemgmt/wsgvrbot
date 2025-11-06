@@ -1,0 +1,84 @@
+{
+  "organization": "West San Gabriel Valley REALTORS\u00ae (WSGVR)",
+  "address": "1039 E. Valley Blvd., Suite 205B, San Gabriel, CA 91776",
+  "contact": {
+    "phone": "(626) 288-6212",
+    "alt_phone": "(626) 288-7658",
+    "email": "info@wsgvr.com",
+    "website": "https://www.wsgvr.org"
+  },
+  "hours": {
+    "monday": "9 AM - 5 PM",
+    "tuesday": "9 AM - 5 PM",
+    "wednesday": "9 AM - 5 PM",
+    "thursday": "8 AM - 5 PM",
+    "friday": "9 AM - 5 PM",
+    "weekends": "Closed"
+  },
+  "mission": "To safeguard private property rights by promoting adherence to the REALTOR\u00ae Code of Ethics and supporting the professional competency of our members.",
+  "vision": "To provide tools, products, services, and education that help members be more productive in the real estate profession.",
+  "categories": {
+    "About": {
+      "description": "The West San Gabriel Valley REALTORS\u00ae serves real estate professionals through advocacy, education, MLS services, and networking. WSGVR is affiliated with the California Association of REALTORS\u00ae and the National Association of REALTORS\u00ae."
+    },
+    "Membership": {
+      "join": "You can join online through the membership page or visit the office in person. Requirements include a completed application, real estate license, and payment for dues and fees.",
+      "renew": "Renew online via the member portal or at the office. Renewal reminders are sent before the due date.",
+      "transfer": "To transfer from another association, provide a letter of good standing and complete the transfer form.",
+      "affiliate": "Affiliate Membership is available for vendors and service providers in the real estate industry."
+    },
+    "Dues & Payments": {
+      "billing": "Annual dues are billed in December and due by January 1.",
+      "methods": "We accept credit card, check, or online payments through the member portal."
+    },
+    "MLS & Tech Support": {
+      "access": "Active members receive CRMLS login credentials by email.",
+      "support": "For login issues, contact CRMLS at (800) 925-1525 or support@crmls.org.",
+      "training": "WSGVR hosts regular CRMLS training sessions both in-person and online. See the calendar at https://www.wsgvr.org/calendar."
+    },
+    "Education & Events": {
+      "classes": [
+        "New Member Orientation",
+        "Continuing Education (CE) Courses",
+        "MLS & Supra Training",
+        "Designation Courses (SRS, ABR, PSA)",
+        "Special Workshops & Lunch-and-Learns"
+      ],
+      "events": [
+        "Membership Mixers",
+        "Committee Meetings",
+        "Annual Installation Banquet",
+        "Community Outreach Events"
+      ],
+      "registration": "Register online at https://www.wsgvr.org/calendar or call the office."
+    },
+    "Lockboxes & Supra": {
+      "get_key": "Visit the office with a valid ID and membership info to activate your eKey or rent a lockbox.",
+      "return": "Lockboxes can be returned during business hours at the Member Services Desk."
+    },
+    "Advocacy & Ethics": {
+      "code_of_ethics": "All members must uphold the REALTOR\u00ae Code of Ethics. Training is provided regularly to maintain compliance.",
+      "complaints": "Download the ethics complaint form from the website or pick one up at the office. Submit it with supporting documents to Professional Standards."
+    },
+    "Local Market Data": {
+      "info": "Monthly housing market statistics are available on the website and distributed via newsletters."
+    },
+    "Automation": {
+      "zapier_ideas": [
+        "Google Sheets - Log new chatbot leads",
+        "Gmail - Send automated responses",
+        "Twilio - Send SMS alerts",
+        "CRM (HubSpot or Follow Up Boss) - Add new leads automatically"
+      ]
+    },
+    "Lead Capture": {
+      "prompt": "To help you better, can I get your name, email, and the type of property you\u2019re interested in? One of our REALTORS\u00ae will reach out shortly."
+    },
+    "Customization Tips": [
+      "Keep tone friendly, helpful, and professional.",
+      "Use real listings or local neighborhood names in examples.",
+      "Add a persona like 'Hi, I'm Alex, your WSGVR virtual assistant!'",
+      "Forward complex questions to info@wsgvr.com."
+    ]
+  }
+}
