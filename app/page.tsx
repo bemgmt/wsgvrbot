@@ -1,24 +1,19 @@
-"use client"
-import Header from "@/components/header"
+import Navigation from "@/components/navigation"
 import Hero from "@/components/hero"
-import QuickLinks from "@/components/quick-links"
-import About from "@/components/about"
-import CTASection from "@/components/cta-section"
-import NewsSection from "@/components/news-section"
+import WhyVicon from "@/components/why-vicon"
+import PricingSection from "@/components/pricing-section"
+import FinalCTA from "@/components/final-cta"
 import Footer from "@/components/footer"
-import Chatbot from "@/components/chatbot"
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col">
-      <Header />
+    <main className="min-h-screen bg-background">
+      <Navigation />
       <Hero />
-      <About />
-      <QuickLinks />
-      <CTASection />
-      <NewsSection />
+      <WhyVicon />
+      <PricingSection />
+      <FinalCTA />
       <Footer />
-      <Chatbot />
     </main>
   )
 }

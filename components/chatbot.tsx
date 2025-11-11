@@ -3,28 +3,35 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { MessageCircle, X, Send } from "lucide-react"
+import { Send, X, MessageCircle } from "lucide-react"
 
 interface Message {
   id: string
-  role: "user" | "assistant"
-  content: string
+  text: string
+  sender: "user" | "bot"
   timestamp: Date
 }
 
-export default function Chatbot() {
+interface LeadInfo {
+  name: string
+  email: string
+  phone: string
+}
+
+export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      role: "assistant",
-      content: "Hello! I'm the West San Gabriel Valley REALTORS® Association assistant. How can I help you today?",
+      text: "Hi! I'm VICON's AI assistant. How can I help protect your home?",
+      sender: "bot",
       timestamp: new Date(),
     },
   ])
-  const [input, setInput] = useState("")
+  const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showLeadForm, setShowLeadForm] = useState(false)
+  const [leadInfo, setLeadInfo] = useState<LeadInfo>({ name: "", email: "", phone: "" })
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -37,17 +44,17 @@ export default function Chatbot() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if (!inputValue.trim() || isLoading) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: "user",
-      content: input,
+      text: inputValue,
+      sender: "user",
       timestamp: new Date(),
     }
 
     setMessages((prev) => [...prev, userMessage])
-    setInput("")
+    setInputValue("")
     setIsLoading(true)
 
     try {
@@ -55,10 +62,8 @@ export default function Chatbot() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
+          message: inputValue,
+          conversationHistory: messages,
         }),
       })
 
@@ -66,20 +71,25 @@ export default function Chatbot() {
 
       const data = await response.json()
 
-      const assistantMessage: Message = {
+      const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.content,
+        text: data.reply,
+        sender: "bot",
         timestamp: new Date(),
       }
 
-      setMessages((prev) => [...prev, assistantMessage])
+      setMessages((prev) => [...prev, botMessage])
+
+      // Show lead form after a few messages
+      if (messages.length > 4 && !showLeadForm) {
+        setShowLeadForm(true)
+      }
     } catch (error) {
-      console.error("[v0] Chat error:", error)
+      console.error("Chat error:", error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "Sorry, I encountered an error. Please try again or contact the association directly.",
+        text: "Sorry, I encountered an error. Please try again.",
+        sender: "bot",
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
@@ -88,80 +98,150 @@ export default function Chatbot() {
     }
   }
 
+  const handleLeadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!leadInfo.name || !leadInfo.email || !leadInfo.phone) return
+
+    try {
+      await fetch("/api/escalate-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(leadInfo),
+      })
+
+      const confirmMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: `Thank you, ${leadInfo.name}! Our team will reach out to you at ${leadInfo.email} shortly to discuss your fire protection needs.`,
+        sender: "bot",
+        timestamp: new Date(),
+      }
+
+      setMessages((prev) => [...prev, confirmMessage])
+      setShowLeadForm(false)
+      setLeadInfo({ name: "", email: "", phone: "" })
+    } catch (error) {
+      console.error("Lead submission error:", error)
+    }
+  }
+
   return (
     <>
-      {/* Chat Widget */}
-      <div className="fixed bottom-6 right-6 z-40">
-        {isOpen ? (
-          <div className="w-96 h-[600px] bg-background border border-border rounded-lg shadow-lg flex flex-col">
-            {/* Header */}
-            <div className="bg-primary text-primary-foreground p-4 rounded-t-lg flex items-center justify-between">
+      {/* Floating Chat Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-6 right-6 z-40 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-4 shadow-lg transition-all duration-300"
+        aria-label="Open chat"
+      >
+        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
+      </button>
+
+      {/* Chat Modal */}
+      {isOpen && (
+        <div className="fixed bottom-24 right-6 z-40 w-96 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-lg shadow-xl flex flex-col max-h-[600px]">
+          {/* Header */}
+          <div className="bg-primary text-primary-foreground p-4 rounded-t-lg flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
               <div>
-                <h3 className="font-semibold text-lg">REALTORS® Assistant</h3>
-                <p className="text-sm opacity-90">West San Gabriel Valley</p>
+                <h3 className="font-semibold">VICON Assistant</h3>
+                <p className="text-xs opacity-90">Always here to help</p>
               </div>
-              <button onClick={() => setIsOpen(false)} className="hover:bg-primary/80 p-1 rounded transition-colors">
-                <X size={20} />
-              </button>
             </div>
+          </div>
 
-            {/* Messages Container */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-card">
-              {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-xs px-4 py-2 rounded-lg ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-none"
-                        : "bg-muted text-muted-foreground rounded-bl-none"
-                    }`}
-                  >
-                    <p className="text-sm leading-relaxed">{message.content}</p>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background">
+            {messages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-xs px-4 py-2 rounded-lg ${
+                    msg.sender === "user"
+                      ? "bg-primary text-primary-foreground rounded-br-none"
+                      : "bg-muted text-foreground rounded-bl-none"
+                  }`}
+                >
+                  <p className="text-sm">{msg.text}</p>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-muted text-foreground px-4 py-2 rounded-lg rounded-bl-none">
+                  <div className="flex gap-2">
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-100"></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-200"></div>
                   </div>
                 </div>
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-muted text-muted-foreground px-4 py-2 rounded-lg rounded-bl-none">
-                    <div className="flex gap-2">
-                      <div className="w-2 h-2 bg-current rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-current rounded-full animate-bounce delay-100" />
-                      <div className="w-2 h-2 bg-current rounded-full animate-bounce delay-200" />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-            {/* Input Form */}
-            <form onSubmit={handleSendMessage} className="border-t border-border p-4 flex gap-2">
+          {/* Lead Form */}
+          {showLeadForm && !leadInfo.name && (
+            <div className="border-t border-border p-4 bg-muted/30">
+              <p className="text-xs text-foreground/80 mb-3">
+                Would you like our team to contact you with more information?
+              </p>
+              <form onSubmit={handleLeadSubmit} className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={leadInfo.name}
+                  onChange={(e) => setLeadInfo({ ...leadInfo, name: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+                <input
+                  type="email"
+                  placeholder="Your email"
+                  value={leadInfo.email}
+                  onChange={(e) => setLeadInfo({ ...leadInfo, email: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+                <input
+                  type="tel"
+                  placeholder="Your phone"
+                  value={leadInfo.phone}
+                  onChange={(e) => setLeadInfo({ ...leadInfo, phone: e.target.value })}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded text-sm font-medium transition-colors"
+                >
+                  Get More Information
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Input Form */}
+          <form onSubmit={handleSendMessage} className="border-t border-border p-4 bg-background rounded-b-lg">
+            <div className="flex gap-2">
               <input
                 type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask me anything..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask about VICON..."
+                className="flex-1 px-3 py-2 text-sm bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={isLoading}
-                className="flex-1 bg-input border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
               <button
                 type="submit"
-                disabled={isLoading || !input.trim()}
-                className="bg-secondary hover:bg-secondary/90 text-secondary-foreground p-2 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading || !inputValue.trim()}
+                className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground p-2 rounded transition-colors"
+                aria-label="Send message"
               >
                 <Send size={20} />
               </button>
-            </form>
-          </div>
-        ) : (
-          <Button
-            onClick={() => setIsOpen(true)}
-            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-full w-14 h-14 p-0 shadow-lg hover:shadow-xl transition-all"
-          >
-            <MessageCircle size={24} />
-          </Button>
-        )}
-      </div>
+            </div>
+          </form>
+        </div>
+      )}
     </>
   )
 }
