@@ -4,17 +4,24 @@ import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { MessageCircle, X, Send } from "lucide-react"
+import { MessageCircle, X, Send, Users, Bot } from "lucide-react"
 
 interface Message {
   id: string
-  role: "user" | "assistant"
+  role: "user" | "assistant" | "employee"
   content: string
   timestamp: Date
+  employeeName?: string
 }
+
+type ChatMode = "ai" | "live"
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
+  const [chatMode, setChatMode] = useState<ChatMode>("ai")
+  const [liveChatId, setLiveChatId] = useState<string | null>(null)
+  const [liveChatStatus, setLiveChatStatus] = useState<"pending" | "active" | null>(null)
+  const [employeeName, setEmployeeName] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -26,6 +33,7 @@ export default function Chatbot() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -34,6 +42,84 @@ export default function Chatbot() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Poll for new messages in live chat mode
+  useEffect(() => {
+    if (chatMode === "live" && liveChatId && liveChatStatus === "active") {
+      const pollMessages = async () => {
+        try {
+          const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null
+          const url = `/api/live-chat/poll?chatId=${liveChatId}${lastMessageId ? `&lastMessageId=${lastMessageId}` : ""}`
+          const response = await fetch(url)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.hasNewMessages && data.messages.length > 0) {
+              setMessages((prev) => {
+                const existingIds = new Set(prev.map((m) => m.id))
+                const newMessages = data.messages
+                  .filter((m: Message) => !existingIds.has(m.id))
+                  .map((m: any) => ({
+                    ...m,
+                    timestamp: new Date(m.timestamp),
+                  }))
+                return [...prev, ...newMessages]
+              })
+            }
+            if (data.sessionStatus !== liveChatStatus) {
+              setLiveChatStatus(data.sessionStatus)
+            }
+          }
+        } catch (error) {
+          console.error("[Live Chat] Poll error:", error)
+        }
+      }
+
+      pollIntervalRef.current = setInterval(pollMessages, 2000) // Poll every 2 seconds
+      return () => {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current)
+        }
+      }
+    }
+  }, [chatMode, liveChatId, liveChatStatus, messages.length])
+
+  const handleRequestLiveChat = async () => {
+    setIsLoading(true)
+    try {
+      const userId = `user_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
+      const response = await fetch("/api/live-chat/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+
+      if (!response.ok) throw new Error("Failed to create chat session")
+
+      const session = await response.json()
+      setLiveChatId(session.id)
+      setLiveChatStatus(session.status)
+      setChatMode("live")
+
+      const welcomeMessage: Message = {
+        id: "live_welcome",
+        role: "assistant",
+        content: "I've connected you with our office. An employee will be with you shortly. Please wait...",
+        timestamp: new Date(),
+      }
+      setMessages([welcomeMessage])
+    } catch (error) {
+      console.error("[Live Chat] Request error:", error)
+      const errorMessage: Message = {
+        id: "live_error",
+        role: "assistant",
+        content: "Sorry, I couldn't connect you to an employee. Please try again or contact the association directly.",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,35 +133,69 @@ export default function Chatbot() {
     }
 
     setMessages((prev) => [...prev, userMessage])
+    const messageContent = input
     setInput("")
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
-      })
+      if (chatMode === "live" && liveChatId) {
+        // Send message to live chat
+        const response = await fetch("/api/live-chat/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId: liveChatId,
+            role: "user",
+            content: messageContent,
+          }),
+        })
 
-      if (!response.ok) throw new Error("Failed to get response")
+        if (!response.ok) throw new Error("Failed to send message")
 
-      const data = await response.json()
+        // Message is already in state, just update status if needed
+        const sessionResponse = await fetch(`/api/live-chat/session?chatId=${liveChatId}`)
+        if (sessionResponse.ok) {
+          const session = await sessionResponse.json()
+          setLiveChatStatus(session.status)
+          if (session.employeeName && !employeeName) {
+            setEmployeeName(session.employeeName)
+            const employeeJoinedMessage: Message = {
+              id: "employee_joined",
+              role: "assistant",
+              content: `${session.employeeName} has joined the chat. You can now chat directly!`,
+              timestamp: new Date(),
+            }
+            setMessages((prev) => [...prev, employeeJoinedMessage])
+          }
+        }
+      } else {
+        // Send message to AI chat
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [...messages, userMessage].map((m) => ({
+              role: m.role === "employee" ? "assistant" : m.role,
+              content: m.content,
+            })),
+          }),
+        })
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.content,
-        timestamp: new Date(),
+        if (!response.ok) throw new Error("Failed to get response")
+
+        const data = await response.json()
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: data.content,
+          timestamp: new Date(),
+        }
+
+        setMessages((prev) => [...prev, assistantMessage])
       }
-
-      setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
-      console.error("[v0] Chat error:", error)
+      console.error("[Chat] Error:", error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -88,6 +208,24 @@ export default function Chatbot() {
     }
   }
 
+  const resetChat = () => {
+    setChatMode("ai")
+    setLiveChatId(null)
+    setLiveChatStatus(null)
+    setEmployeeName(null)
+    setMessages([
+      {
+        id: "1",
+        role: "assistant",
+        content: "Hello! I'm the West San Gabriel Valley REALTORS® Association assistant. How can I help you today?",
+        timestamp: new Date(),
+      },
+    ])
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+    }
+  }
+
   return (
     <>
       {/* Chat Widget */}
@@ -97,13 +235,62 @@ export default function Chatbot() {
             {/* Header */}
             <div className="bg-primary text-primary-foreground p-4 rounded-t-lg flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-lg">REALTORS® Assistant</h3>
-                <p className="text-sm opacity-90">West San Gabriel Valley</p>
+                <h3 className="font-semibold text-lg">
+                  {chatMode === "live" ? "Live Chat" : "REALTORS® Assistant"}
+                </h3>
+                <p className="text-sm opacity-90">
+                  {chatMode === "live" && employeeName
+                    ? `Chatting with ${employeeName}`
+                    : chatMode === "live" && liveChatStatus === "pending"
+                      ? "Waiting for employee..."
+                      : "West San Gabriel Valley"}
+                </p>
               </div>
               <button onClick={() => setIsOpen(false)} className="hover:bg-primary/80 p-1 rounded transition-colors">
                 <X size={20} />
               </button>
             </div>
+
+            {/* Mode Switcher */}
+            {messages.length === 1 && chatMode === "ai" && (
+              <div className="border-b border-border p-3 bg-muted/50">
+                <p className="text-xs text-muted-foreground mb-2">Choose how you'd like to chat:</p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setChatMode("ai")}
+                    variant={chatMode === "ai" ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1 text-xs"
+                  >
+                    <Bot size={14} className="mr-1" />
+                    AI Assistant
+                  </Button>
+                  <Button
+                    onClick={handleRequestLiveChat}
+                    variant={chatMode === "live" ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1 text-xs"
+                    disabled={isLoading}
+                  >
+                    <Users size={14} className="mr-1" />
+                    Live Chat
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {chatMode === "live" && (
+              <div className="border-b border-border p-2 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {liveChatStatus === "pending" ? "⏳ Waiting for employee..." : "✅ Connected"}
+                  </span>
+                  <Button onClick={resetChat} variant="ghost" size="sm" className="text-xs h-6">
+                    Switch to AI
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Messages Container */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-card">
@@ -113,9 +300,14 @@ export default function Chatbot() {
                     className={`max-w-xs px-4 py-2 rounded-lg ${
                       message.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-none"
-                        : "bg-muted text-muted-foreground rounded-bl-none"
+                        : message.role === "employee"
+                          ? "bg-blue-500 text-white rounded-bl-none"
+                          : "bg-muted text-muted-foreground rounded-bl-none"
                     }`}
                   >
+                    {message.role === "employee" && message.employeeName && (
+                      <p className="text-xs font-semibold mb-1 opacity-90">{message.employeeName}</p>
+                    )}
                     <p className="text-sm leading-relaxed">{message.content}</p>
                   </div>
                 </div>
@@ -140,8 +332,14 @@ export default function Chatbot() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask me anything..."
-                disabled={isLoading}
+                placeholder={
+                  chatMode === "live" && liveChatStatus === "pending"
+                    ? "Waiting for employee to join..."
+                    : chatMode === "live"
+                      ? "Type your message..."
+                      : "Ask me anything..."
+                }
+                disabled={isLoading || (chatMode === "live" && liveChatStatus === "pending")}
                 className="flex-1 bg-input border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
               <button

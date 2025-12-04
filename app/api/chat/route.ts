@@ -3,6 +3,18 @@ import { openai } from "@ai-sdk/openai"
 import knowledgeBase from "@/wsgvr_chatbot_knowledge.json"
 import personnelData from "@/wsgvr_personnel_2015_2024.json"
 
+// CORS headers for iframe embeds
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+}
+
+// Handle preflight requests
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders })
+}
+
 const buildSystemPrompt = () => {
   return `You are a helpful assistant for the West San Gabriel Valley REALTORS® Association.
 You provide information about:
@@ -42,11 +54,15 @@ export async function POST(request: Request) {
       messages,
     })
 
-    return Response.json({
-      content: response.text,
-    })
+    return Response.json(
+      { content: response.text },
+      { headers: corsHeaders }
+    )
   } catch (error) {
     console.error("[v0] Chat API error:", error)
-    return Response.json({ error: "Failed to generate response" }, { status: 500 })
+    return Response.json(
+      { error: "Failed to generate response" },
+      { status: 500, headers: corsHeaders }
+    )
   }
 }
