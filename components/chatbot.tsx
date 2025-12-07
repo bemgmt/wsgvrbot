@@ -124,70 +124,53 @@ export default function Chatbot() {
         try {
           // Always fetch full session to get status updates and employee info
           const sessionResponse = await fetch(`/api/live-chat/session?chatId=${liveChatId}`)
-          if (!sessionResponse.ok) return
+          if (!sessionResponse.ok) {
+            console.error("[Live Chat] Poll failed:", sessionResponse.status)
+            return
+          }
 
           const session = await sessionResponse.json()
 
-          // Update status if changed
-          if (session.status !== liveChatStatus) {
-            setLiveChatStatus(session.status)
-          }
+          // Update status
+          setLiveChatStatus(session.status)
 
-          // Check if employee just joined (status changed to active and we have employee info)
-          if (session.status === "active" && session.employeeName && !employeeName) {
+          // Update employee name if we have it
+          if (session.employeeName) {
             setEmployeeName(session.employeeName)
-            // Add employee joined message only once
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === "employee_joined")) return prev
-              return [
-                ...prev,
-                {
-                  id: "employee_joined",
-                  role: "assistant" as const,
-                  content: `${session.employeeName} has joined the chat. You can now chat directly!`,
-                  timestamp: new Date(),
-                },
-              ]
-            })
           }
 
-          // Sync messages from server (filter by server message IDs that start with "msg_")
+          // Sync messages from server
           if (session.messages && session.messages.length > 0) {
             setMessages((prev) => {
+              // Get IDs of existing server messages
               const existingServerIds = new Set(prev.filter((m) => m.id.startsWith("msg_")).map((m) => m.id))
-              const newServerMessages = session.messages
-                .filter((m: any) => m.id.startsWith("msg_") && !existingServerIds.has(m.id))
-                .map((m: any) => ({
-                  id: m.id,
-                  role: m.role as "user" | "assistant" | "employee",
-                  content: m.content,
-                  timestamp: new Date(m.timestamp),
-                }))
 
-              if (newServerMessages.length === 0) return prev
+              // Check if there are any new server messages
+              const hasNewMessages = session.messages.some((m: any) => !existingServerIds.has(m.id))
+              if (!hasNewMessages) return prev
 
-              // Filter out local user messages that have been confirmed by server
-              // (local messages don't have "msg_" prefix)
-              const localUserMessages = prev.filter((m) => !m.id.startsWith("msg_") && m.role === "user")
-              const serverUserContents = new Set(
-                session.messages.filter((m: any) => m.role === "user").map((m: any) => m.content)
-              )
-              const unconfirmedLocalMessages = localUserMessages.filter((m) => !serverUserContents.has(m.content))
-
-              // Keep system messages (welcome, employee_joined) and unconfirmed local messages
+              // Keep system/UI messages (ones without msg_ prefix that aren't user messages)
               const systemMessages = prev.filter(
-                (m) => m.id === "live_welcome" || m.id === "employee_joined"
+                (m) => !m.id.startsWith("msg_") && m.role !== "user" &&
+                       (m.id === "live_welcome" || m.id === "employee_joined" || m.id.startsWith("takeover_"))
               )
 
-              // Combine: system messages + all server messages + unconfirmed local
+              // Convert all server messages
               const allServerMessages = session.messages.map((m: any) => ({
                 id: m.id,
                 role: m.role as "user" | "assistant" | "employee",
                 content: m.content,
                 timestamp: new Date(m.timestamp),
+                employeeName: m.employeeName,
               }))
 
-              return [...systemMessages, ...allServerMessages, ...unconfirmedLocalMessages]
+              // Get local user messages that haven't been confirmed by server yet
+              const serverContents = new Set(session.messages.map((m: any) => m.content))
+              const pendingLocalUserMessages = prev.filter(
+                (m) => !m.id.startsWith("msg_") && m.role === "user" && !serverContents.has(m.content)
+              )
+
+              return [...systemMessages, ...allServerMessages, ...pendingLocalUserMessages]
             })
           }
         } catch (error) {
@@ -204,7 +187,7 @@ export default function Chatbot() {
         }
       }
     }
-  }, [chatMode, liveChatId]) // Removed liveChatStatus and messages.length to prevent interval reset
+  }, [chatMode, liveChatId])
 
   const handleRequestLiveChat = async () => {
     setIsLoading(true)
@@ -273,9 +256,13 @@ export default function Chatbot() {
           }),
         })
 
-        if (!response.ok) throw new Error("Failed to send message")
-        // Polling will handle status updates and message syncing
-      } else {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error("[Live Chat] Send message failed:", response.status, errorData)
+          throw new Error(errorData.error || "Failed to send message")
+        }
+        // Polling will handle message syncing
+      } else if (chatMode === "ai") {
         // Send message to AI chat
         const response = await fetch("/api/chat", {
           method: "POST",
@@ -293,6 +280,27 @@ export default function Chatbot() {
         if (!response.ok) throw new Error("Failed to get response")
 
         const data = await response.json()
+
+        // Check if AI wants to connect to live chat
+        if (data.content.includes("[CONNECT_LIVE_CHAT]")) {
+          // Remove the command from the message
+          const cleanContent = data.content.replace("[CONNECT_LIVE_CHAT]", "").trim()
+
+          if (cleanContent) {
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: "assistant",
+              content: cleanContent,
+              timestamp: new Date(),
+            }
+            setMessages((prev) => [...prev, assistantMessage])
+          }
+
+          // Trigger live chat connection
+          setIsLoading(false) // Reset loading before calling
+          await handleRequestLiveChat()
+          return // Exit early since we're switching modes
+        }
 
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
@@ -367,29 +375,22 @@ export default function Chatbot() {
               </button>
             </div>
 
-            {/* Mode Switcher */}
-            {messages.length === 1 && chatMode === "ai" && (
-              <div className="border-b border-border p-3 bg-muted/50">
-                <p className="text-xs text-muted-foreground mb-2">Choose how you'd like to chat:</p>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setChatMode("ai")}
-                    variant={chatMode === "ai" ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1 text-xs"
-                  >
-                    <Bot size={14} className="mr-1" />
-                    AI Assistant
-                  </Button>
+            {/* Mode Indicator & Switcher - Always visible */}
+            {chatMode === "ai" && (
+              <div className="border-b border-border p-2 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Bot size={12} /> AI Assistant
+                  </span>
                   <Button
                     onClick={handleRequestLiveChat}
                     variant="outline"
                     size="sm"
-                    className="flex-1 text-xs"
+                    className="text-xs h-6"
                     disabled={isLoading}
                   >
-                    <Users size={14} className="mr-1" />
-                    Live Chat
+                    <Users size={12} className="mr-1" />
+                    Talk to Human
                   </Button>
                 </div>
               </div>
@@ -398,8 +399,9 @@ export default function Chatbot() {
             {chatMode === "live" && (
               <div className="border-b border-border p-2 bg-muted/30">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {liveChatStatus === "pending" ? "⏳ Waiting for employee..." : "✅ Connected"}
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Users size={12} />
+                    {liveChatStatus === "pending" ? "⏳ Waiting for employee..." : `✅ Connected${employeeName ? ` with ${employeeName}` : ""}`}
                   </span>
                   <Button onClick={resetChat} variant="ghost" size="sm" className="text-xs h-6">
                     Switch to AI

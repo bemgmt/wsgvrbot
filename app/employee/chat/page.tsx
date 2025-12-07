@@ -71,25 +71,29 @@ export default function EmployeeChatPage() {
   // Fetch pending, active, and AI chats
   const fetchChats = async () => {
     try {
+      // Fetch all data first, then update state atomically
       const [pendingRes, activeRes, aiRes] = await Promise.all([
         fetch(`/api/live-chat/employee?type=pending`),
         fetch(`/api/live-chat/employee?type=active&employeeId=${employeeId}`),
         fetch(`/api/ai-chat/session?listAll=true`),
       ])
 
-      if (pendingRes.ok) {
-        const pending = await pendingRes.json()
-        setPendingChats(pending.map((s: any) => ({ ...s, createdAt: new Date(s.createdAt), updatedAt: new Date(s.updatedAt) })))
+      // Parse all responses
+      const pendingData = pendingRes.ok ? await pendingRes.json() : null
+      const activeData = activeRes.ok ? await activeRes.json() : null
+      const aiData = aiRes.ok ? await aiRes.json() : null
+
+      // Update state only if we got valid data
+      if (pendingData !== null) {
+        setPendingChats(pendingData.map((s: any) => ({ ...s, createdAt: new Date(s.createdAt), updatedAt: new Date(s.updatedAt) })))
       }
 
-      if (activeRes.ok) {
-        const active = await activeRes.json()
-        setActiveChats(active.map((s: any) => ({ ...s, createdAt: new Date(s.createdAt), updatedAt: new Date(s.updatedAt) })))
+      if (activeData !== null) {
+        setActiveChats(activeData.map((s: any) => ({ ...s, createdAt: new Date(s.createdAt), updatedAt: new Date(s.updatedAt) })))
       }
 
-      if (aiRes.ok) {
-        const ai = await aiRes.json()
-        setAIChats(ai.map((s: any) => ({ ...s, createdAt: new Date(s.createdAt), updatedAt: new Date(s.updatedAt) })))
+      if (aiData !== null) {
+        setAIChats(aiData.map((s: any) => ({ ...s, createdAt: new Date(s.createdAt), updatedAt: new Date(s.updatedAt) })))
       }
     } catch (error) {
       console.error("[Employee Chat] Fetch error:", error)
