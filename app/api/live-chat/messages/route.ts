@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const message = chatStore.addMessage(chatId, {
+    const message = await chatStore.addMessage(chatId, {
       chatId,
       role,
       content,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const session = chatStore.getSession(chatId)
+    const session = await chatStore.getSession(chatId)
 
     if (!session) {
       return NextResponse.json(

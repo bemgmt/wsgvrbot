@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const session = chatStore.getSession(chatId)
+    const session = await chatStore.getSession(chatId)
 
     if (!session) {
       return NextResponse.json(

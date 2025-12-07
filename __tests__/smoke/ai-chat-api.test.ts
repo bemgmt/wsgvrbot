@@ -1,4 +1,34 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+// Mock the @vercel/kv module
+const mockKvStore = new Map<string, any>()
+const mockKvSets = new Map<string, Set<string>>()
+
+vi.mock('@vercel/kv', () => ({
+  kv: {
+    set: vi.fn(async (key: string, value: any) => {
+      mockKvStore.set(key, value)
+      return 'OK'
+    }),
+    get: vi.fn(async (key: string) => {
+      return mockKvStore.get(key) || null
+    }),
+    sadd: vi.fn(async (key: string, value: string) => {
+      if (!mockKvSets.has(key)) mockKvSets.set(key, new Set())
+      mockKvSets.get(key)!.add(value)
+      return 1
+    }),
+    srem: vi.fn(async (key: string, value: string) => {
+      mockKvSets.get(key)?.delete(value)
+      return 1
+    }),
+    smembers: vi.fn(async (key: string) => {
+      return Array.from(mockKvSets.get(key) || [])
+    }),
+  }
+}))
+
+// Import after mocking
 import { POST as createSession } from '@/app/api/ai-chat/session/route'
 import { POST as takeoverSession } from '@/app/api/ai-chat/takeover/route'
 import { chatStore } from '@/lib/chat-store'
@@ -15,11 +45,9 @@ function createMockRequest(method: string, body?: object, url?: string): Request
 
 describe('AI Chat Session API Smoke Tests', () => {
   beforeEach(() => {
-    // Clear all sessions before each test
-    const sessions = chatStore.getAllAISessions()
-    sessions.forEach(s => {
-      chatStore.sessions?.delete(s.id)
-    })
+    // Clear mocks between tests
+    mockKvStore.clear()
+    mockKvSets.clear()
   })
 
   describe('POST /api/ai-chat/session', () => {
@@ -69,45 +97,43 @@ describe('AI Chat Session API Smoke Tests', () => {
   // Note: GET endpoint tests are skipped because Next.js NextRequest.nextUrl
   // requires the full Next.js runtime. These are better tested with integration tests.
   describe('GET /api/ai-chat/session (via chatStore)', () => {
-    it('should retrieve session by ID using chatStore directly', () => {
-      const session = chatStore.createAISession('user-123', 'Test User')
+    it('should retrieve session by ID using chatStore directly', async () => {
+      const session = await chatStore.createAISession('user-123', 'Test User')
 
-      const retrieved = chatStore.getSession(session.id)
+      const retrieved = await chatStore.getSession(session.id)
 
       expect(retrieved).toBeDefined()
       expect(retrieved?.id).toBe(session.id)
       expect(retrieved?.userName).toBe('Test User')
     })
 
-    it('should list all AI sessions using chatStore directly', () => {
-      chatStore.createAISession('user-1')
-      chatStore.createAISession('user-2')
+    it('should list all AI sessions using chatStore directly', async () => {
+      await chatStore.createAISession('user-1')
+      await chatStore.createAISession('user-2')
 
-      const sessions = chatStore.getAllAISessions()
+      const sessions = await chatStore.getAllAISessions()
 
       expect(Array.isArray(sessions)).toBe(true)
       expect(sessions.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('should return undefined for non-existent session', () => {
-      const session = chatStore.getSession('fake-id')
+    it('should return null for non-existent session', async () => {
+      const session = await chatStore.getSession('fake-id')
 
-      expect(session).toBeUndefined()
+      expect(session).toBeNull()
     })
   })
 })
 
 describe('AI Chat Takeover API Smoke Tests', () => {
   beforeEach(() => {
-    // Clear all sessions before each test
-    const sessions = chatStore.getAllAISessions()
-    sessions.forEach(s => {
-      chatStore.sessions?.delete(s.id)
-    })
+    // Clear mocks between tests
+    mockKvStore.clear()
+    mockKvSets.clear()
   })
 
   it('should convert AI session to live mode', async () => {
-    const session = chatStore.createAISession('user-123')
+    const session = await chatStore.createAISession('user-123')
 
     const request = createMockRequest('POST', {
       chatId: session.id,

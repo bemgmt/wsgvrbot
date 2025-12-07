@@ -1,12 +1,12 @@
-// In-memory store for live chat sessions
-// In production, this should be replaced with a database (Redis, PostgreSQL, etc.)
+// Persistent chat store using Vercel KV
+import { kv } from "@vercel/kv"
 
 export interface ChatMessage {
   id: string
   chatId: string
   role: "user" | "employee" | "assistant"
   content: string
-  timestamp: Date
+  timestamp: string // ISO string for JSON serialization
   employeeId?: string
   employeeName?: string
 }
@@ -19,109 +19,163 @@ export interface ChatSession {
   employeeName?: string
   chatMode: "ai" | "live"
   status: "pending" | "active" | "closed"
-  createdAt: Date
-  updatedAt: Date
+  createdAt: string // ISO string for JSON serialization
+  updatedAt: string // ISO string for JSON serialization
   messages: ChatMessage[]
 }
 
-export class ChatStore {
-  sessions: Map<string, ChatSession> = new Map()
-  private employeeSessions: Map<string, Set<string>> = new Map() // employeeId -> Set of chatIds
+// KV key prefixes
+const SESSION_PREFIX = "chat:session:"
+const PENDING_SET = "chat:pending"
+const AI_SET = "chat:ai"
+const ACTIVE_SET = "chat:active"
+const EMPLOYEE_PREFIX = "chat:employee:"
 
-  createSession(userId: string, userName?: string): ChatSession {
+// TTL for sessions (24 hours)
+const SESSION_TTL = 60 * 60 * 24
+
+export class ChatStore {
+  async createSession(userId: string, userName?: string): Promise<ChatSession> {
     const session: ChatSession = {
       id: `chat_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       userId,
       userName,
       chatMode: "live",
       status: "pending",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       messages: [],
     }
-    this.sessions.set(session.id, session)
+
+    await kv.set(`${SESSION_PREFIX}${session.id}`, session, { ex: SESSION_TTL })
+    await kv.sadd(PENDING_SET, session.id)
+
     return session
   }
 
-  createAISession(userId: string, userName?: string): ChatSession {
+  async createAISession(userId: string, userName?: string): Promise<ChatSession> {
     const session: ChatSession = {
       id: `chat_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       userId,
       userName,
       chatMode: "ai",
       status: "active",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       messages: [],
     }
-    this.sessions.set(session.id, session)
+
+    await kv.set(`${SESSION_PREFIX}${session.id}`, session, { ex: SESSION_TTL })
+    await kv.sadd(AI_SET, session.id)
+
     return session
   }
 
-  getSession(chatId: string): ChatSession | undefined {
-    return this.sessions.get(chatId)
+  async getSession(chatId: string): Promise<ChatSession | null> {
+    return await kv.get<ChatSession>(`${SESSION_PREFIX}${chatId}`)
   }
 
-  getAllPendingSessions(): ChatSession[] {
-    return Array.from(this.sessions.values()).filter(
-      (s) => s.status === "pending" && s.chatMode === "live"
+  async getAllPendingSessions(): Promise<ChatSession[]> {
+    const ids = await kv.smembers(PENDING_SET)
+    if (!ids || ids.length === 0) return []
+
+    const sessions = await Promise.all(
+      ids.map((id) => kv.get<ChatSession>(`${SESSION_PREFIX}${id}`))
     )
+
+    // Filter out null sessions and clean up stale references
+    const validSessions: ChatSession[] = []
+    for (let i = 0; i < sessions.length; i++) {
+      const session = sessions[i]
+      if (session && session.status === "pending" && session.chatMode === "live") {
+        validSessions.push(session)
+      } else if (!session) {
+        // Clean up stale reference
+        await kv.srem(PENDING_SET, ids[i])
+      }
+    }
+
+    return validSessions
   }
 
-  getAllAISessions(): ChatSession[] {
-    return Array.from(this.sessions.values()).filter(
-      (s) => s.chatMode === "ai" && s.status === "active"
+  async getAllAISessions(): Promise<ChatSession[]> {
+    const ids = await kv.smembers(AI_SET)
+    if (!ids || ids.length === 0) return []
+
+    const sessions = await Promise.all(
+      ids.map((id) => kv.get<ChatSession>(`${SESSION_PREFIX}${id}`))
     )
+
+    const validSessions: ChatSession[] = []
+    for (let i = 0; i < sessions.length; i++) {
+      const session = sessions[i]
+      if (session && session.chatMode === "ai" && session.status === "active") {
+        validSessions.push(session)
+      } else if (!session) {
+        await kv.srem(AI_SET, ids[i])
+      }
+    }
+
+    return validSessions
   }
 
-  convertAIToLive(chatId: string, employeeId: string, employeeName: string): boolean {
-    const session = this.sessions.get(chatId)
+  async convertAIToLive(chatId: string, empId: string, empName: string): Promise<boolean> {
+    const session = await this.getSession(chatId)
     if (!session || session.chatMode !== "ai" || session.status !== "active") {
       return false
     }
 
     session.chatMode = "live"
     session.status = "active"
-    session.employeeId = employeeId
-    session.employeeName = employeeName
-    session.updatedAt = new Date()
+    session.employeeId = empId
+    session.employeeName = empName
+    session.updatedAt = new Date().toISOString()
 
-    if (!this.employeeSessions.has(employeeId)) {
-      this.employeeSessions.set(employeeId, new Set())
-    }
-    this.employeeSessions.get(employeeId)!.add(chatId)
+    await kv.set(`${SESSION_PREFIX}${chatId}`, session, { ex: SESSION_TTL })
+    await kv.srem(AI_SET, chatId)
+    await kv.sadd(ACTIVE_SET, chatId)
+    await kv.sadd(`${EMPLOYEE_PREFIX}${empId}`, chatId)
 
     return true
   }
 
-  getEmployeeActiveSessions(employeeId: string): ChatSession[] {
-    const chatIds = this.employeeSessions.get(employeeId) || new Set()
-    return Array.from(chatIds)
-      .map((id) => this.sessions.get(id))
-      .filter((s): s is ChatSession => s !== undefined && s.status === "active")
+  async getEmployeeActiveSessions(employeeId: string): Promise<ChatSession[]> {
+    const ids = await kv.smembers(`${EMPLOYEE_PREFIX}${employeeId}`)
+    if (!ids || ids.length === 0) return []
+
+    const sessions = await Promise.all(
+      ids.map((id) => kv.get<ChatSession>(`${SESSION_PREFIX}${id}`))
+    )
+
+    return sessions.filter(
+      (s): s is ChatSession => s !== null && s.status === "active"
+    )
   }
 
-  assignEmployee(chatId: string, employeeId: string, employeeName: string): boolean {
-    const session = this.sessions.get(chatId)
+  async assignEmployee(chatId: string, empId: string, empName: string): Promise<boolean> {
+    const session = await this.getSession(chatId)
     if (!session || session.status !== "pending") {
       return false
     }
 
-    session.employeeId = employeeId
-    session.employeeName = employeeName
+    session.employeeId = empId
+    session.employeeName = empName
     session.status = "active"
-    session.updatedAt = new Date()
+    session.updatedAt = new Date().toISOString()
 
-    if (!this.employeeSessions.has(employeeId)) {
-      this.employeeSessions.set(employeeId, new Set())
-    }
-    this.employeeSessions.get(employeeId)!.add(chatId)
+    await kv.set(`${SESSION_PREFIX}${chatId}`, session, { ex: SESSION_TTL })
+    await kv.srem(PENDING_SET, chatId)
+    await kv.sadd(ACTIVE_SET, chatId)
+    await kv.sadd(`${EMPLOYEE_PREFIX}${empId}`, chatId)
 
     return true
   }
 
-  addMessage(chatId: string, message: Omit<ChatMessage, "id" | "timestamp">): ChatMessage | null {
-    const session = this.sessions.get(chatId)
+  async addMessage(
+    chatId: string,
+    message: Omit<ChatMessage, "id" | "timestamp">
+  ): Promise<ChatMessage | null> {
+    const session = await this.getSession(chatId)
     if (!session) {
       return null
     }
@@ -129,36 +183,47 @@ export class ChatStore {
     const newMessage: ChatMessage = {
       ...message,
       id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     }
 
     session.messages.push(newMessage)
-    session.updatedAt = new Date()
+    session.updatedAt = new Date().toISOString()
+
+    await kv.set(`${SESSION_PREFIX}${chatId}`, session, { ex: SESSION_TTL })
+
     return newMessage
   }
 
-  closeSession(chatId: string): boolean {
-    const session = this.sessions.get(chatId)
+  async closeSession(chatId: string): Promise<boolean> {
+    const session = await this.getSession(chatId)
     if (!session) {
       return false
     }
 
     session.status = "closed"
-    session.updatedAt = new Date()
+    session.updatedAt = new Date().toISOString()
+
+    await kv.set(`${SESSION_PREFIX}${chatId}`, session, { ex: SESSION_TTL })
+    await kv.srem(PENDING_SET, chatId)
+    await kv.srem(AI_SET, chatId)
+    await kv.srem(ACTIVE_SET, chatId)
 
     if (session.employeeId) {
-      const employeeChats = this.employeeSessions.get(session.employeeId)
-      if (employeeChats) {
-        employeeChats.delete(chatId)
-      }
+      await kv.srem(`${EMPLOYEE_PREFIX}${session.employeeId}`, chatId)
     }
 
     return true
   }
 
-  // Get all active sessions (for admin view)
-  getAllActiveSessions(): ChatSession[] {
-    return Array.from(this.sessions.values()).filter((s) => s.status === "active")
+  async getAllActiveSessions(): Promise<ChatSession[]> {
+    const ids = await kv.smembers(ACTIVE_SET)
+    if (!ids || ids.length === 0) return []
+
+    const sessions = await Promise.all(
+      ids.map((id) => kv.get<ChatSession>(`${SESSION_PREFIX}${id}`))
+    )
+
+    return sessions.filter((s): s is ChatSession => s !== null && s.status === "active")
   }
 }
 

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const success = chatStore.closeSession(chatId)
+    const success = await chatStore.closeSession(chatId)
 
     if (!success) {
       return NextResponse.json(

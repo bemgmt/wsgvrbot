@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const session = chatStore.createAISession(userId, userName)
+    const session = await chatStore.createAISession(userId, userName)
 
     return NextResponse.json(session, { headers: corsHeaders })
   } catch (error) {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     // List all active AI sessions (for employee monitoring)
     if (listAll === "true") {
-      const sessions = chatStore.getAllAISessions()
+      const sessions = await chatStore.getAllAISessions()
       return NextResponse.json(sessions, { headers: corsHeaders })
     }
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const session = chatStore.getSession(chatId)
+    const session = await chatStore.getSession(chatId)
 
     if (!session) {
       return NextResponse.json(

@@ -66,14 +66,14 @@ export async function POST(request: Request) {
     if (sessionId) {
       // Save user message if provided
       if (userMessage) {
-        chatStore.addMessage(sessionId, {
+        await chatStore.addMessage(sessionId, {
           chatId: sessionId,
           role: "user",
           content: userMessage,
         })
       }
       // Save AI response
-      chatStore.addMessage(sessionId, {
+      await chatStore.addMessage(sessionId, {
         chatId: sessionId,
         role: "assistant",
         content: response.text,

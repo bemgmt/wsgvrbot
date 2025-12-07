@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const success = chatStore.convertAIToLive(chatId, employeeId, employeeName)
+    const success = await chatStore.convertAIToLive(chatId, employeeId, employeeName)
 
     if (!success) {
       return NextResponse.json(
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const session = chatStore.getSession(chatId)
+    const session = await chatStore.getSession(chatId)
     return NextResponse.json(session, { headers: corsHeaders })
   } catch (error) {
     console.error("[AI Chat] Takeover error:", error)

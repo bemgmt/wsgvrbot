@@ -19,12 +19,12 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type") || "pending" // "pending" | "active"
 
     if (type === "pending") {
-      const pendingSessions = chatStore.getAllPendingSessions()
+      const pendingSessions = await chatStore.getAllPendingSessions()
       return NextResponse.json(pendingSessions, { headers: corsHeaders })
     }
 
     if (type === "active" && employeeId) {
-      const activeSessions = chatStore.getEmployeeActiveSessions(employeeId)
+      const activeSessions = await chatStore.getEmployeeActiveSessions(employeeId)
       return NextResponse.json(activeSessions, { headers: corsHeaders })
     }
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const success = chatStore.assignEmployee(chatId, employeeId, employeeName)
+    const success = await chatStore.assignEmployee(chatId, employeeId, employeeName)
 
     if (!success) {
       return NextResponse.json(
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const session = chatStore.getSession(chatId)
+    const session = await chatStore.getSession(chatId)
     return NextResponse.json(session, { headers: corsHeaders })
   } catch (error) {
     console.error("[Live Chat] Assign employee error:", error)

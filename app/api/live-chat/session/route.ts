@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const session = chatStore.createSession(userId, userName)
+    const session = await chatStore.createSession(userId, userName)
 
     return NextResponse.json(session, { headers: corsHeaders })
   } catch (error) {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const session = chatStore.getSession(chatId)
+    const session = await chatStore.getSession(chatId)
 
     if (!session) {
       return NextResponse.json(
