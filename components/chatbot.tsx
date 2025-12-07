@@ -117,45 +117,94 @@ export default function Chatbot() {
     }
   }, [chatMode, aiSessionId, takenOver])
 
-  // Poll for new messages in live chat mode
+  // Poll for new messages and status updates in live chat mode
   useEffect(() => {
-    if (chatMode === "live" && liveChatId && liveChatStatus === "active") {
+    if (chatMode === "live" && liveChatId) {
       const pollMessages = async () => {
         try {
-          const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null
-          const url = `/api/live-chat/poll?chatId=${liveChatId}${lastMessageId ? `&lastMessageId=${lastMessageId}` : ""}`
-          const response = await fetch(url)
-          if (response.ok) {
-            const data = await response.json()
-            if (data.hasNewMessages && data.messages.length > 0) {
-              setMessages((prev) => {
-                const existingIds = new Set(prev.map((m) => m.id))
-                const newMessages = data.messages
-                  .filter((m: Message) => !existingIds.has(m.id))
-                  .map((m: any) => ({
-                    ...m,
-                    timestamp: new Date(m.timestamp),
-                  }))
-                return [...prev, ...newMessages]
-              })
-            }
-            if (data.sessionStatus !== liveChatStatus) {
-              setLiveChatStatus(data.sessionStatus)
-            }
+          // Always fetch full session to get status updates and employee info
+          const sessionResponse = await fetch(`/api/live-chat/session?chatId=${liveChatId}`)
+          if (!sessionResponse.ok) return
+
+          const session = await sessionResponse.json()
+
+          // Update status if changed
+          if (session.status !== liveChatStatus) {
+            setLiveChatStatus(session.status)
+          }
+
+          // Check if employee just joined (status changed to active and we have employee info)
+          if (session.status === "active" && session.employeeName && !employeeName) {
+            setEmployeeName(session.employeeName)
+            // Add employee joined message only once
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === "employee_joined")) return prev
+              return [
+                ...prev,
+                {
+                  id: "employee_joined",
+                  role: "assistant" as const,
+                  content: `${session.employeeName} has joined the chat. You can now chat directly!`,
+                  timestamp: new Date(),
+                },
+              ]
+            })
+          }
+
+          // Sync messages from server (filter by server message IDs that start with "msg_")
+          if (session.messages && session.messages.length > 0) {
+            setMessages((prev) => {
+              const existingServerIds = new Set(prev.filter((m) => m.id.startsWith("msg_")).map((m) => m.id))
+              const newServerMessages = session.messages
+                .filter((m: any) => m.id.startsWith("msg_") && !existingServerIds.has(m.id))
+                .map((m: any) => ({
+                  id: m.id,
+                  role: m.role as "user" | "assistant" | "employee",
+                  content: m.content,
+                  timestamp: new Date(m.timestamp),
+                }))
+
+              if (newServerMessages.length === 0) return prev
+
+              // Filter out local user messages that have been confirmed by server
+              // (local messages don't have "msg_" prefix)
+              const localUserMessages = prev.filter((m) => !m.id.startsWith("msg_") && m.role === "user")
+              const serverUserContents = new Set(
+                session.messages.filter((m: any) => m.role === "user").map((m: any) => m.content)
+              )
+              const unconfirmedLocalMessages = localUserMessages.filter((m) => !serverUserContents.has(m.content))
+
+              // Keep system messages (welcome, employee_joined) and unconfirmed local messages
+              const systemMessages = prev.filter(
+                (m) => m.id === "live_welcome" || m.id === "employee_joined"
+              )
+
+              // Combine: system messages + all server messages + unconfirmed local
+              const allServerMessages = session.messages.map((m: any) => ({
+                id: m.id,
+                role: m.role as "user" | "assistant" | "employee",
+                content: m.content,
+                timestamp: new Date(m.timestamp),
+              }))
+
+              return [...systemMessages, ...allServerMessages, ...unconfirmedLocalMessages]
+            })
           }
         } catch (error) {
           console.error("[Live Chat] Poll error:", error)
         }
       }
 
-      pollIntervalRef.current = setInterval(pollMessages, 2000) // Poll every 2 seconds
+      // Poll immediately, then every 1.5 seconds for better responsiveness
+      pollMessages()
+      pollIntervalRef.current = setInterval(pollMessages, 1500)
       return () => {
         if (pollIntervalRef.current) {
           clearInterval(pollIntervalRef.current)
         }
       }
     }
-  }, [chatMode, liveChatId, liveChatStatus, messages.length])
+  }, [chatMode, liveChatId]) // Removed liveChatStatus and messages.length to prevent interval reset
 
   const handleRequestLiveChat = async () => {
     setIsLoading(true)
@@ -213,7 +262,7 @@ export default function Chatbot() {
 
     try {
       if (chatMode === "live" && liveChatId) {
-        // Send message to live chat
+        // Send message to live chat - polling will sync it back
         const response = await fetch("/api/live-chat/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -225,23 +274,7 @@ export default function Chatbot() {
         })
 
         if (!response.ok) throw new Error("Failed to send message")
-
-        // Message is already in state, just update status if needed
-        const sessionResponse = await fetch(`/api/live-chat/session?chatId=${liveChatId}`)
-        if (sessionResponse.ok) {
-          const session = await sessionResponse.json()
-          setLiveChatStatus(session.status)
-          if (session.employeeName && !employeeName) {
-            setEmployeeName(session.employeeName)
-            const employeeJoinedMessage: Message = {
-              id: "employee_joined",
-              role: "assistant",
-              content: `${session.employeeName} has joined the chat. You can now chat directly!`,
-              timestamp: new Date(),
-            }
-            setMessages((prev) => [...prev, employeeJoinedMessage])
-          }
-        }
+        // Polling will handle status updates and message syncing
       } else {
         // Send message to AI chat
         const response = await fetch("/api/chat", {

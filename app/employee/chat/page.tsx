@@ -120,13 +120,15 @@ export default function EmployeeChatPage() {
       }
     }
 
-    const interval = setInterval(pollMessages, 2000)
+    // Poll immediately, then every 1.5 seconds
+    pollMessages()
+    const interval = setInterval(pollMessages, 1500)
     return () => clearInterval(interval)
   }, [selectedChatId])
 
   useEffect(() => {
     fetchChats()
-    const interval = setInterval(fetchChats, 3000) // Refresh chat list every 3 seconds
+    const interval = setInterval(fetchChats, 2000) // Refresh chat list every 2 seconds
     return () => clearInterval(interval)
   }, [employeeId])
 
