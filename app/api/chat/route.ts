@@ -2,6 +2,7 @@ import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import knowledgeBase from "@/wsgvr_chatbot_knowledge.json"
 import personnelData from "@/wsgvr_personnel_2015_2024.json"
+import { chatStore } from "@/lib/chat-store"
 
 // CORS headers for iframe embeds
 const corsHeaders = {
@@ -46,13 +47,31 @@ Include relevant details such as their years of service, awards received, and bi
 
 export async function POST(request: Request) {
   try {
-    const { messages } = await request.json()
+    const { messages, sessionId, userMessage } = await request.json()
 
     const response = await generateText({
       model: openai("gpt-4o-mini"),
       system: buildSystemPrompt(),
       messages,
     })
+
+    // If a sessionId is provided, save the user message and AI response to the session store
+    if (sessionId) {
+      // Save user message if provided
+      if (userMessage) {
+        chatStore.addMessage(sessionId, {
+          chatId: sessionId,
+          role: "user",
+          content: userMessage,
+        })
+      }
+      // Save AI response
+      chatStore.addMessage(sessionId, {
+        chatId: sessionId,
+        role: "assistant",
+        content: response.text,
+      })
+    }
 
     return Response.json(
       { content: response.text },

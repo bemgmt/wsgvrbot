@@ -19,9 +19,11 @@ type ChatMode = "ai" | "live"
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [chatMode, setChatMode] = useState<ChatMode>("ai")
+  const [aiSessionId, setAISessionId] = useState<string | null>(null)
   const [liveChatId, setLiveChatId] = useState<string | null>(null)
   const [liveChatStatus, setLiveChatStatus] = useState<"pending" | "active" | null>(null)
   const [employeeName, setEmployeeName] = useState<string | null>(null)
+  const [takenOver, setTakenOver] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -34,6 +36,8 @@ export default function Chatbot() {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const aiPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const userIdRef = useRef<string>(`user_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -42,6 +46,76 @@ export default function Chatbot() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Create AI session when chat opens (if not already created)
+  useEffect(() => {
+    if (isOpen && chatMode === "ai" && !aiSessionId && !takenOver) {
+      const createAISession = async () => {
+        try {
+          const response = await fetch("/api/ai-chat/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: userIdRef.current }),
+          })
+
+          if (response.ok) {
+            const session = await response.json()
+            setAISessionId(session.id)
+          }
+        } catch (error) {
+          console.error("[AI Chat] Create session error:", error)
+        }
+      }
+      createAISession()
+    }
+  }, [isOpen, chatMode, aiSessionId, takenOver])
+
+  // Poll to detect takeover (when AI session is converted to live by an employee)
+  useEffect(() => {
+    if (chatMode === "ai" && aiSessionId && !takenOver) {
+      const pollForTakeover = async () => {
+        try {
+          const response = await fetch(`/api/ai-chat/session?chatId=${aiSessionId}`)
+          if (response.ok) {
+            const session = await response.json()
+            // Check if session has been converted to live mode
+            if (session.chatMode === "live" && session.employeeName) {
+              // Takeover detected!
+              setTakenOver(true)
+              setChatMode("live")
+              setLiveChatId(aiSessionId)
+              setLiveChatStatus("active")
+              setEmployeeName(session.employeeName)
+
+              // Add notification message
+              const takeoverMessage: Message = {
+                id: `takeover_${Date.now()}`,
+                role: "assistant",
+                content: `🎉 ${session.employeeName} has joined the chat! You're now chatting with a human agent.`,
+                timestamp: new Date(),
+              }
+              setMessages((prev) => [...prev, takeoverMessage])
+
+              // Clear AI polling interval
+              if (aiPollIntervalRef.current) {
+                clearInterval(aiPollIntervalRef.current)
+                aiPollIntervalRef.current = null
+              }
+            }
+          }
+        } catch (error) {
+          console.error("[AI Chat] Poll for takeover error:", error)
+        }
+      }
+
+      aiPollIntervalRef.current = setInterval(pollForTakeover, 3000) // Check every 3 seconds
+      return () => {
+        if (aiPollIntervalRef.current) {
+          clearInterval(aiPollIntervalRef.current)
+        }
+      }
+    }
+  }, [chatMode, aiSessionId, takenOver])
 
   // Poll for new messages in live chat mode
   useEffect(() => {
@@ -178,6 +252,8 @@ export default function Chatbot() {
               role: m.role === "employee" ? "assistant" : m.role,
               content: m.content,
             })),
+            sessionId: aiSessionId, // Include session ID for message persistence
+            userMessage: messageContent, // Include the user message for saving
           }),
         })
 
@@ -210,9 +286,11 @@ export default function Chatbot() {
 
   const resetChat = () => {
     setChatMode("ai")
+    setAISessionId(null)
     setLiveChatId(null)
     setLiveChatStatus(null)
     setEmployeeName(null)
+    setTakenOver(false)
     setMessages([
       {
         id: "1",
@@ -224,6 +302,11 @@ export default function Chatbot() {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current)
     }
+    if (aiPollIntervalRef.current) {
+      clearInterval(aiPollIntervalRef.current)
+    }
+    // Generate new user ID for the new session
+    userIdRef.current = `user_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
   }
 
   return (
