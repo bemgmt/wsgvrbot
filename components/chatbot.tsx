@@ -350,7 +350,7 @@ export default function Chatbot() {
                   </Button>
                   <Button
                     onClick={handleRequestLiveChat}
-                    variant={chatMode === "live" ? "default" : "outline"}
+                    variant="outline"
                     size="sm"
                     className="flex-1 text-xs"
                     disabled={isLoading}
