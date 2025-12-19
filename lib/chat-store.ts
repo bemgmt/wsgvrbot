@@ -22,6 +22,14 @@ export interface ChatSession {
   createdAt: string // ISO string for JSON serialization
   updatedAt: string // ISO string for JSON serialization
   messages: ChatMessage[]
+  takeoverMetadata?: {
+    takenOverAt: string // ISO string for JSON serialization
+    takenOverBy: string // employeeId
+    takenOverByName: string // employeeName
+    aiSessionDuration: number // milliseconds
+    messageCountAtTakeover: number
+    lastAIMessage?: string // Last AI assistant message before takeover
+  }
 }
 
 // KV key prefixes
@@ -119,24 +127,133 @@ export class ChatStore {
     return validSessions
   }
 
-  async convertAIToLive(chatId: string, empId: string, empName: string): Promise<boolean> {
-    const session = await this.getSession(chatId)
-    if (!session || session.chatMode !== "ai" || session.status !== "active") {
-      return false
+  async convertAIToLive(chatId: string, empId: string, empName: string): Promise<{
+    success: boolean
+    error?: string
+    session?: ChatSession
+    metadata?: {
+      aiSessionDuration: number
+      messageCount: number
+      userMessageCount: number
+      aiMessageCount: number
+      sessionAge: string
     }
+  }> {
+    const startTime = Date.now()
+    
+    try {
+      // Get the session with detailed validation
+      const session = await this.getSession(chatId)
+      
+      if (!session) {
+        console.error(`[ChatStore] convertAIToLive: Session not found for chatId: ${chatId}`)
+        return {
+          success: false,
+          error: `Session not found: ${chatId}`,
+        }
+      }
 
-    session.chatMode = "live"
-    session.status = "active"
-    session.employeeId = empId
-    session.employeeName = empName
-    session.updatedAt = new Date().toISOString()
+      if (session.chatMode !== "ai") {
+        console.warn(
+          `[ChatStore] convertAIToLive: Session ${chatId} is not in AI mode. Current mode: ${session.chatMode}`
+        )
+        return {
+          success: false,
+          error: `Session is not in AI mode. Current mode: ${session.chatMode}`,
+          session,
+        }
+      }
 
-    await kv.set(`${SESSION_PREFIX}${chatId}`, session, { ex: SESSION_TTL })
-    await kv.srem(AI_SET, chatId)
-    await kv.sadd(ACTIVE_SET, chatId)
-    await kv.sadd(`${EMPLOYEE_PREFIX}${empId}`, chatId)
+      if (session.status !== "active") {
+        console.warn(
+          `[ChatStore] convertAIToLive: Session ${chatId} is not active. Current status: ${session.status}`
+        )
+        return {
+          success: false,
+          error: `Session is not active. Current status: ${session.status}`,
+          session,
+        }
+      }
 
-    return true
+      // Calculate session statistics before conversion
+      const createdAt = new Date(session.createdAt)
+      const now = new Date()
+      const aiSessionDuration = now.getTime() - createdAt.getTime()
+      const messageCount = session.messages.length
+      const userMessageCount = session.messages.filter((m) => m.role === "user").length
+      const aiMessageCount = session.messages.filter((m) => m.role === "assistant").length
+      
+      // Get the last AI message for context
+      const lastAIMessage = session.messages
+        .slice()
+        .reverse()
+        .find((m) => m.role === "assistant")?.content
+
+      // Format session age for readability
+      const hours = Math.floor(aiSessionDuration / (1000 * 60 * 60))
+      const minutes = Math.floor((aiSessionDuration % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((aiSessionDuration % (1000 * 60)) / 1000)
+      const sessionAge = hours > 0 
+        ? `${hours}h ${minutes}m ${seconds}s`
+        : minutes > 0
+        ? `${minutes}m ${seconds}s`
+        : `${seconds}s`
+
+      // Create takeover metadata
+      const takeoverMetadata = {
+        takenOverAt: now.toISOString(),
+        takenOverBy: empId,
+        takenOverByName: empName,
+        aiSessionDuration,
+        messageCountAtTakeover: messageCount,
+        lastAIMessage,
+      }
+
+      // Perform the conversion
+      session.chatMode = "live"
+      session.status = "active"
+      session.employeeId = empId
+      session.employeeName = empName
+      session.updatedAt = now.toISOString()
+      session.takeoverMetadata = takeoverMetadata
+
+      // Update KV store atomically
+      await kv.set(`${SESSION_PREFIX}${chatId}`, session, { ex: SESSION_TTL })
+      await kv.srem(AI_SET, chatId)
+      await kv.sadd(ACTIVE_SET, chatId)
+      await kv.sadd(`${EMPLOYEE_PREFIX}${empId}`, chatId)
+
+      const processingTime = Date.now() - startTime
+      console.log(
+        `[ChatStore] convertAIToLive: Successfully converted session ${chatId} from AI to live mode. ` +
+        `Employee: ${empName} (${empId}), ` +
+        `Duration: ${sessionAge}, ` +
+        `Messages: ${messageCount} (${userMessageCount} user, ${aiMessageCount} AI), ` +
+        `Processing time: ${processingTime}ms`
+      )
+
+      return {
+        success: true,
+        session,
+        metadata: {
+          aiSessionDuration,
+          messageCount,
+          userMessageCount,
+          aiMessageCount,
+          sessionAge,
+        },
+      }
+    } catch (error) {
+      const processingTime = Date.now() - startTime
+      console.error(
+        `[ChatStore] convertAIToLive: Error converting session ${chatId} after ${processingTime}ms:`,
+        error
+      )
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error during conversion",
+      }
+    }
   }
 
   async getEmployeeActiveSessions(employeeId: string): Promise<ChatSession[]> {

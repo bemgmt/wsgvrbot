@@ -110,19 +110,26 @@ describe('ChatStore Smoke Tests', () => {
 
       const result = await store.convertAIToLive(session.id, 'emp1', 'John Employee')
 
-      expect(result).toBe(true)
+      expect(result.success).toBe(true)
+      expect(result.session).toBeDefined()
+      expect(result.metadata).toBeDefined()
 
       const updated = await store.getSession(session.id)
       expect(updated?.chatMode).toBe('live')
       expect(updated?.status).toBe('active')
       expect(updated?.employeeId).toBe('emp1')
       expect(updated?.employeeName).toBe('John Employee')
+      expect(updated?.takeoverMetadata).toBeDefined()
+      expect(updated?.takeoverMetadata?.takenOverBy).toBe('emp1')
+      expect(updated?.takeoverMetadata?.takenOverByName).toBe('John Employee')
     })
 
     it('should fail to convert non-existent session', async () => {
       const result = await store.convertAIToLive('fake-id', 'emp1', 'Employee')
 
-      expect(result).toBe(false)
+      expect(result.success).toBe(false)
+      expect(result.error).toBeDefined()
+      expect(result.session).toBeUndefined()
     })
 
     it('should fail to convert already live session', async () => {
@@ -130,7 +137,9 @@ describe('ChatStore Smoke Tests', () => {
 
       const result = await store.convertAIToLive(session.id, 'emp1', 'Employee')
 
-      expect(result).toBe(false)
+      expect(result.success).toBe(false)
+      expect(result.error).toBeDefined()
+      expect(result.session).toBeDefined() // Session exists but conversion failed
     })
 
     it('should preserve messages after conversion', async () => {
@@ -146,12 +155,37 @@ describe('ChatStore Smoke Tests', () => {
         content: 'Hello! How can I help?',
       })
 
-      await store.convertAIToLive(session.id, 'emp1', 'John')
+      const result = await store.convertAIToLive(session.id, 'emp1', 'John')
+      expect(result.success).toBe(true)
+      expect(result.metadata?.messageCount).toBe(2)
 
       const updated = await store.getSession(session.id)
       expect(updated?.messages).toHaveLength(2)
       expect(updated?.messages[0].content).toBe('Hello AI')
       expect(updated?.messages[1].content).toBe('Hello! How can I help?')
+    })
+
+    it('should include metadata about the takeover', async () => {
+      const session = await store.createAISession('user1')
+      await store.addMessage(session.id, {
+        chatId: session.id,
+        role: 'user',
+        content: 'Test message',
+      })
+
+      const result = await store.convertAIToLive(session.id, 'emp1', 'John Employee')
+
+      expect(result.success).toBe(true)
+      expect(result.metadata).toBeDefined()
+      expect(result.metadata?.messageCount).toBe(1)
+      expect(result.metadata?.userMessageCount).toBe(1)
+      expect(result.metadata?.aiMessageCount).toBe(0)
+      expect(result.metadata?.sessionAge).toBeDefined()
+      expect(result.metadata?.aiSessionDuration).toBeGreaterThanOrEqual(0)
+
+      const updated = await store.getSession(session.id)
+      expect(updated?.takeoverMetadata).toBeDefined()
+      expect(updated?.takeoverMetadata?.messageCountAtTakeover).toBe(1)
     })
   })
 

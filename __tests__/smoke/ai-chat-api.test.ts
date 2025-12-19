@@ -145,9 +145,12 @@ describe('AI Chat Takeover API Smoke Tests', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.chatMode).toBe('live')
-    expect(data.employeeName).toBe('Jane Employee')
-    expect(data.status).toBe('active')
+    expect(data.success).toBe(true)
+    expect(data.session.chatMode).toBe('live')
+    expect(data.session.employeeName).toBe('Jane Employee')
+    expect(data.session.status).toBe('active')
+    expect(data.metadata).toBeDefined()
+    expect(data.metadata.sessionStats).toBeDefined()
   })
 
   it('should return 400 for missing parameters', async () => {

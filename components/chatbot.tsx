@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { MessageCircle, X, Send, Users, Bot } from "lucide-react"
+import { toast } from "sonner"
 
 interface Message {
   id: string
@@ -24,6 +25,8 @@ export default function Chatbot() {
   const [liveChatStatus, setLiveChatStatus] = useState<"pending" | "active" | null>(null)
   const [employeeName, setEmployeeName] = useState<string | null>(null)
   const [takenOver, setTakenOver] = useState(false)
+  const previousEmployeeNameRef = useRef<string | null>(null)
+  const previousLiveChatStatusRef = useRef<"pending" | "active" | null>(null)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -87,6 +90,13 @@ export default function Chatbot() {
               setLiveChatStatus("active")
               setEmployeeName(session.employeeName)
 
+              // Show onscreen notification
+              toast.success("Human Agent Joined!", {
+                description: `${session.employeeName} has joined the chat. You're now chatting with a real person!`,
+                duration: 5000,
+                position: "top-right",
+              })
+
               // Add notification message
               const takeoverMessage: Message = {
                 id: `takeover_${Date.now()}`,
@@ -131,12 +141,29 @@ export default function Chatbot() {
 
           const session = await sessionResponse.json()
 
+          // Check if employee just joined (for manually requested live chats, not takeovers)
+          const wasPending = previousLiveChatStatusRef.current === "pending"
+          const isNowActive = session.status === "active"
+          const hasNewEmployee = session.employeeName && 
+            session.employeeName !== previousEmployeeNameRef.current &&
+            !takenOver // Only show notification if this wasn't a takeover
+
+          if (wasPending && isNowActive && hasNewEmployee) {
+            // Employee just joined a manually requested live chat
+            toast.success("Employee Joined!", {
+              description: `${session.employeeName} is now available to help you.`,
+              duration: 5000,
+            })
+          }
+
           // Update status
           setLiveChatStatus(session.status)
+          previousLiveChatStatusRef.current = session.status
 
           // Update employee name if we have it
           if (session.employeeName) {
             setEmployeeName(session.employeeName)
+            previousEmployeeNameRef.current = session.employeeName
           }
 
           // Sync messages from server
@@ -206,6 +233,12 @@ export default function Chatbot() {
       setLiveChatStatus(session.status)
       setChatMode("live")
 
+      // Show notification that live chat was requested
+      toast.info("Connecting to Live Chat", {
+        description: "An employee will be with you shortly. Please wait...",
+        duration: 4000,
+      })
+
       const welcomeMessage: Message = {
         id: "live_welcome",
         role: "assistant",
@@ -215,6 +248,10 @@ export default function Chatbot() {
       setMessages([welcomeMessage])
     } catch (error) {
       console.error("[Live Chat] Request error:", error)
+      toast.error("Connection Failed", {
+        description: "Couldn't connect you to an employee. Please try again or contact the association directly.",
+        duration: 5000,
+      })
       const errorMessage: Message = {
         id: "live_error",
         role: "assistant",
@@ -332,6 +369,8 @@ export default function Chatbot() {
     setLiveChatStatus(null)
     setEmployeeName(null)
     setTakenOver(false)
+    previousEmployeeNameRef.current = null
+    previousLiveChatStatusRef.current = null
     setMessages([
       {
         id: "1",

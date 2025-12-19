@@ -112,7 +112,8 @@ describe('AI to Live Chat Takeover - User Flow', () => {
         employeeId,
         employeeName
       )
-      expect(takeoverResult).toBe(true)
+      expect(takeoverResult.success).toBe(true)
+      expect(takeoverResult.metadata?.messageCount).toBe(4)
 
       // Verify session is now live
       session = await store.getSession(aiSession.id)
@@ -165,11 +166,12 @@ describe('AI to Live Chat Takeover - User Flow', () => {
 
       // First takeover succeeds
       const result1 = await store.convertAIToLive(session.id, 'emp1', 'Employee 1')
-      expect(result1).toBe(true)
+      expect(result1.success).toBe(true)
 
       // Second takeover fails (already live)
       const result2 = await store.convertAIToLive(session.id, 'emp2', 'Employee 2')
-      expect(result2).toBe(false)
+      expect(result2.success).toBe(false)
+      expect(result2.error).toBeDefined()
 
       // Original employee still assigned
       const updated = await store.getSession(session.id)
@@ -181,7 +183,8 @@ describe('AI to Live Chat Takeover - User Flow', () => {
 
       const result = await store.convertAIToLive(session.id, 'emp1', 'Employee')
 
-      expect(result).toBe(true)
+      expect(result.success).toBe(true)
+      expect(result.metadata?.messageCount).toBe(0)
       const updated = await store.getSession(session.id)
       expect(updated?.messages).toHaveLength(0)
       expect(updated?.chatMode).toBe('live')
