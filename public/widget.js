@@ -22,21 +22,25 @@
     #donna-widget-launcher {
       position: fixed;
       z-index: ${cfg.z};
-      width: 56px;
-      height: 56px;
+      width: 64px;
+      height: 64px;
       border-radius: 999px;
       border: none;
       cursor: pointer;
-      box-shadow: 0 10px 30px rgba(0,0,0,.18);
-      font: 600 14px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background: #0b1220;
+      box-shadow: 0 4px 20px rgba(11, 18, 32, 0.3), 0 8px 30px rgba(11, 18, 32, 0.2);
+      font: 600 28px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: linear-gradient(135deg, #0b1220 0%, #1a2332 100%);
       color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     #donna-widget-launcher:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 25px rgba(11, 18, 32, 0.4), 0 12px 40px rgba(11, 18, 32, 0.3);
+    }
+    #donna-widget-launcher:active {
       transform: scale(1.05);
     }
     #donna-widget-panel {
@@ -44,22 +48,23 @@
       z-index: ${cfg.z};
       width: ${cfg.width}px;
       height: ${cfg.height}px;
-      border-radius: 14px;
+      border-radius: 16px;
       overflow: hidden;
       background: #fff;
-      box-shadow: 0 12px 40px rgba(0,0,0,.22);
+      box-shadow: 0 20px 60px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.05);
       display: none;
       flex-direction: column;
     }
     #donna-widget-header {
-      height: 46px;
+      height: 56px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
-      background: #0b1220;
+      padding: 0 20px;
+      background: linear-gradient(135deg, #0b1220 0%, #1a2332 100%);
       color: #fff;
-      font: 600 14px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      font: 600 16px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
     }
     #donna-widget-close {
       background: transparent;
@@ -116,7 +121,7 @@
 
     // Slightly offset launcher vs panel
     if (kind === "panel" && pos.startsWith("bottom")) {
-      el.style.bottom = (oy + 70) + "px";
+      el.style.bottom = (oy + 80) + "px";
     }
   }
 
@@ -125,7 +130,11 @@
   launcher.id = "donna-widget-launcher";
   launcher.type = "button";
   launcher.setAttribute("aria-label", "Open chat");
-  launcher.textContent = "💬";
+  launcher.innerHTML = `
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+  `;
   applyPosition(launcher, "launcher");
 
   // Panel

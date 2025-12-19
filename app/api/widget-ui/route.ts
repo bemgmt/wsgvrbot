@@ -55,21 +55,35 @@ export async function GET(request: NextRequest) {
       display: flex;
       flex-direction: column;
       background: #fff;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
     #chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 16px;
-      background: #f9fafb;
+      padding: 20px;
+      background: linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+    #chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    #chat-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #chat-messages::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    #chat-messages::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
     .message {
       display: flex;
-      max-width: 80%;
-      animation: fadeIn 0.3s;
+      max-width: 85%;
+      animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .message.user {
       align-self: flex-end;
@@ -79,37 +93,98 @@ export async function GET(request: NextRequest) {
       align-self: flex-start;
       justify-content: flex-start;
     }
+    .message.employee {
+      align-self: flex-start;
+      justify-content: flex-start;
+    }
     .message-bubble {
-      padding: 10px 14px;
-      border-radius: 12px;
+      padding: 12px 16px;
+      border-radius: 18px;
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.6;
       word-wrap: break-word;
       white-space: pre-wrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     .message.user .message-bubble {
-      background: #0b1220;
+      background: linear-gradient(135deg, #0b1220 0%, #1a2332 100%);
       color: #fff;
       border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 12px rgba(11, 18, 32, 0.2);
     }
     .message.assistant .message-bubble {
-      background: #e5e7eb;
-      color: #1f2937;
+      background: #ffffff;
+      color: #1e293b;
       border-bottom-left-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+    .message.employee .message-bubble {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: #fff;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .message.employee .message-bubble::before {
+      content: "👤 ";
+    }
+    .talk-to-human-btn {
+      margin: 12px 0;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .talk-to-human-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    }
+    .talk-to-human-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .live-chat-status {
+      padding: 10px 16px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 12px;
+      color: #0369a1;
+      font-size: 13px;
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .live-chat-status.active {
+      background: #dcfce7;
+      border-color: #86efac;
+      color: #166534;
     }
     .loading-indicator {
       display: flex;
-      gap: 4px;
-      padding: 10px 14px;
-      background: #e5e7eb;
-      border-radius: 12px;
+      gap: 5px;
+      padding: 12px 16px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
       border-bottom-left-radius: 4px;
-      max-width: 60px;
+      max-width: 70px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     .loading-dot {
       width: 8px;
       height: 8px;
-      background: #6b7280;
+      background: #94a3b8;
       border-radius: 50%;
       animation: bounce 1.4s infinite ease-in-out;
     }
@@ -121,16 +196,18 @@ export async function GET(request: NextRequest) {
     }
     @keyframes bounce {
       0%, 80%, 100% {
-        transform: scale(0);
+        transform: scale(0.6);
+        opacity: 0.5;
       }
       40% {
         transform: scale(1);
+        opacity: 1;
       }
     }
     @keyframes fadeIn {
       from {
         opacity: 0;
-        transform: translateY(4px);
+        transform: translateY(8px);
       }
       to {
         opacity: 1;
@@ -138,49 +215,60 @@ export async function GET(request: NextRequest) {
       }
     }
     #chat-input-container {
-      border-top: 1px solid #e5e7eb;
-      padding: 12px;
-      background: #fff;
+      border-top: 1px solid #e2e8f0;
+      padding: 16px;
+      background: #ffffff;
       display: flex;
-      gap: 8px;
+      gap: 10px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
     }
     #chat-input {
       flex: 1;
-      padding: 10px 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
       font-size: 14px;
       font-family: inherit;
       outline: none;
-      transition: border-color 0.2s;
+      transition: all 0.2s;
+      background: #f8fafc;
     }
     #chat-input:focus {
       border-color: #0b1220;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(11, 18, 32, 0.1);
     }
     #chat-input:disabled {
-      background: #f3f4f6;
+      background: #f1f5f9;
       cursor: not-allowed;
+      opacity: 0.7;
     }
     #chat-send {
-      padding: 10px 16px;
-      background: #0b1220;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #0b1220 0%, #1a2332 100%);
       color: #fff;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 4px 12px rgba(11, 18, 32, 0.2);
     }
     #chat-send:hover:not(:disabled) {
-      background: #1a2332;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(11, 18, 32, 0.3);
+    }
+    #chat-send:active:not(:disabled) {
+      transform: translateY(0);
     }
     #chat-send:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+      transform: none;
     }
     #chat-send svg {
       width: 18px;
@@ -195,7 +283,7 @@ export async function GET(request: NextRequest) {
       <input
         type="text"
         id="chat-input"
-        placeholder="Ask me anything..."
+        placeholder="Type your message..."
         autocomplete="off"
       />
       <button id="chat-send" type="button" aria-label="Send message">
@@ -216,6 +304,15 @@ export async function GET(request: NextRequest) {
       
       let messages = [];
       let isLoading = false;
+      let aiSessionId = null;
+      let liveChatId = null;
+      let chatMode = 'ai'; // 'ai' or 'live'
+      let liveChatStatus = null; // 'pending' or 'active'
+      let employeeName = null;
+      let takenOver = false;
+      let userId = \`user_\${Date.now()}_\${Math.random().toString(36).slice(2, 11)}\`;
+      let pollInterval = null;
+      let takeoverPollInterval = null;
       
       // Get API base URL from parent widget config
       let widgetApiUrl = '';
@@ -225,9 +322,101 @@ export async function GET(request: NextRequest) {
       }
       const finalApiUrl = widgetApiUrl || apiBaseUrl;
       
+      // Create AI session on load
+      async function createAISession() {
+        try {
+          const response = await fetch(\`\${finalApiUrl}/api/ai-chat/session\`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId }),
+            credentials: 'omit'
+          });
+          if (response.ok) {
+            const session = await response.json();
+            aiSessionId = session.id;
+            console.log('[Widget] AI session created:', aiSessionId);
+          }
+        } catch (error) {
+          console.error('[Widget] Failed to create AI session:', error);
+        }
+      }
+      
+      // Poll for takeover (when AI session is converted to live by an employee)
+      function startTakeoverPolling() {
+        if (takeoverPollInterval) clearInterval(takeoverPollInterval);
+        if (chatMode !== 'ai' || !aiSessionId || takenOver) return;
+        
+        takeoverPollInterval = setInterval(async () => {
+          try {
+            const response = await fetch(\`\${finalApiUrl}/api/ai-chat/session?chatId=\${aiSessionId}\`, {
+              credentials: 'omit'
+            });
+            if (response.ok) {
+              const session = await response.json();
+              if (session.chatMode === 'live' && session.employeeName) {
+                // Takeover detected!
+                takenOver = true;
+                chatMode = 'live';
+                liveChatId = aiSessionId;
+                liveChatStatus = 'active';
+                employeeName = session.employeeName;
+                
+                if (takeoverPollInterval) {
+                  clearInterval(takeoverPollInterval);
+                  takeoverPollInterval = null;
+                }
+                
+                addMessage('assistant', \`🎉 \${session.employeeName} has joined the chat! You're now chatting with a human agent.\`);
+                startLiveChatPolling();
+              }
+            }
+          } catch (error) {
+            console.error('[Widget] Takeover poll error:', error);
+          }
+        }, 3000);
+      }
+      
+      // Poll for new messages in live chat mode
+      function startLiveChatPolling() {
+        if (pollInterval) clearInterval(pollInterval);
+        if (chatMode !== 'live' || !liveChatId) return;
+        
+        const pollMessages = async () => {
+          try {
+            const response = await fetch(\`\${finalApiUrl}/api/live-chat/messages?chatId=\${liveChatId}\`, {
+              credentials: 'omit'
+            });
+            if (response.ok) {
+              const serverMessages = await response.json();
+              const existingIds = new Set(messages.map(m => m.id));
+              
+              serverMessages.forEach(msg => {
+                if (!existingIds.has(msg.id)) {
+                  const message = {
+                    id: msg.id,
+                    role: msg.role === 'employee' ? 'employee' : msg.role,
+                    content: msg.content,
+                    timestamp: new Date(msg.timestamp || Date.now())
+                  };
+                  messages.push(message);
+                }
+              });
+              
+              renderMessages();
+              scrollToBottom();
+            }
+          } catch (error) {
+            console.error('[Widget] Live chat poll error:', error);
+          }
+        };
+        
+        pollMessages();
+        pollInterval = setInterval(pollMessages, 1500);
+      }
+      
       function addMessage(role, content) {
         const message = {
-          id: Date.now().toString(),
+          id: \`msg_\${Date.now()}_\${Math.random().toString(36).slice(2, 9)}\`,
           role,
           content,
           timestamp: new Date()
@@ -239,6 +428,7 @@ export async function GET(request: NextRequest) {
       
       function renderMessages() {
         messagesContainer.innerHTML = '';
+        
         messages.forEach(msg => {
           const messageDiv = document.createElement('div');
           messageDiv.className = \`message \${msg.role}\`;
@@ -250,6 +440,31 @@ export async function GET(request: NextRequest) {
           messageDiv.appendChild(bubble);
           messagesContainer.appendChild(messageDiv);
         });
+        
+        // Show "Talk to Human" button if in AI mode and not taken over
+        if (chatMode === 'ai' && !takenOver && messages.length > 0) {
+          const buttonContainer = document.createElement('div');
+          buttonContainer.style.cssText = 'display: flex; justify-content: center; margin: 8px 0;';
+          const talkBtn = document.createElement('button');
+          talkBtn.className = 'talk-to-human-btn';
+          talkBtn.disabled = isLoading;
+          talkBtn.innerHTML = '👤 Talk to Human Agent';
+          talkBtn.onclick = requestLiveChat;
+          buttonContainer.appendChild(talkBtn);
+          messagesContainer.appendChild(buttonContainer);
+        }
+        
+        // Show live chat status
+        if (chatMode === 'live') {
+          const statusDiv = document.createElement('div');
+          statusDiv.className = \`live-chat-status \${liveChatStatus === 'active' ? 'active' : ''}\`;
+          if (liveChatStatus === 'active' && employeeName) {
+            statusDiv.innerHTML = \`✅ Connected with \${employeeName}\`;
+          } else {
+            statusDiv.innerHTML = '⏳ Waiting for an agent to join...';
+          }
+          messagesContainer.appendChild(statusDiv);
+        }
         
         if (isLoading) {
           const loadingDiv = document.createElement('div');
@@ -266,7 +481,41 @@ export async function GET(request: NextRequest) {
       }
       
       function scrollToBottom() {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        setTimeout(() => {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 100);
+      }
+      
+      async function requestLiveChat() {
+        if (isLoading) return;
+        isLoading = true;
+        renderMessages();
+        
+        try {
+          const response = await fetch(\`\${finalApiUrl}/api/live-chat/session\`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId }),
+            credentials: 'omit'
+          });
+          
+          if (!response.ok) throw new Error('Failed to create live chat session');
+          
+          const session = await response.json();
+          liveChatId = session.id;
+          liveChatStatus = session.status;
+          chatMode = 'live';
+          
+          addMessage('assistant', "I've connected you with our office. An employee will be with you shortly. Please wait...");
+          
+          startLiveChatPolling();
+        } catch (error) {
+          console.error('[Widget] Live chat request error:', error);
+          addMessage('assistant', 'Sorry, I couldn\'t connect you to an employee. Please try again or contact the association directly.');
+        } finally {
+          isLoading = false;
+          renderMessages();
+        }
       }
       
       async function sendMessage() {
@@ -282,22 +531,53 @@ export async function GET(request: NextRequest) {
         scrollToBottom();
         
         try {
-          const response = await fetch(\`\${finalApiUrl}/api/chat\`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: messages.filter(m => m.role !== 'assistant' || m.content).map(m => ({
-                role: m.role,
-                content: m.content
-              }))
-            }),
-            credentials: 'omit'
-          });
-          
-          if (!response.ok) throw new Error('Failed to get response');
-          
-          const data = await response.json();
-          addMessage('assistant', data.content);
+          if (chatMode === 'live' && liveChatId) {
+            // Send message to live chat
+            const response = await fetch(\`\${finalApiUrl}/api/live-chat/messages\`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chatId: liveChatId,
+                role: 'user',
+                content: text
+              }),
+              credentials: 'omit'
+            });
+            
+            if (!response.ok) throw new Error('Failed to send message');
+            // Polling will handle receiving the response
+          } else {
+            // Send message to AI chat
+            const response = await fetch(\`\${finalApiUrl}/api/chat\`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                messages: messages.filter(m => m.role !== 'assistant' || m.content).map(m => ({
+                  role: m.role === 'employee' ? 'assistant' : m.role,
+                  content: m.content
+                })),
+                sessionId: aiSessionId,
+                userMessage: text
+              }),
+              credentials: 'omit'
+            });
+            
+            if (!response.ok) throw new Error('Failed to get response');
+            
+            const data = await response.json();
+            
+            // Check if AI wants to connect to live chat
+            if (data.content && data.content.includes('[CONNECT_LIVE_CHAT]')) {
+              const cleanContent = data.content.replace('[CONNECT_LIVE_CHAT]', '').trim();
+              if (cleanContent) {
+                addMessage('assistant', cleanContent);
+              }
+              await requestLiveChat();
+              return;
+            }
+            
+            addMessage('assistant', data.content);
+          }
         } catch (error) {
           console.error('[Widget] Chat error:', error);
           addMessage('assistant', 'Sorry, I encountered an error. Please try again or contact the association directly.');
@@ -317,11 +597,22 @@ export async function GET(request: NextRequest) {
         }
       });
       
+      // Initialize
+      createAISession().then(() => {
+        startTakeoverPolling();
+      });
+      
       // Add initial greeting
       addMessage('assistant', config.greeting);
       
       // Focus input
       setTimeout(() => input.focus(), 100);
+      
+      // Cleanup on unload
+      window.addEventListener('beforeunload', () => {
+        if (pollInterval) clearInterval(pollInterval);
+        if (takeoverPollInterval) clearInterval(takeoverPollInterval);
+      });
     })();
   </script>
 </body>
@@ -343,4 +634,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-
