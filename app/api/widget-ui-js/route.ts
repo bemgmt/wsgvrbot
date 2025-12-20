@@ -73,11 +73,16 @@ export async function GET(request: NextRequest) {
   const sendButton = document.getElementById('chat-send');
   const headerTitle = document.getElementById('chat-header-title');
   const headerSubtitle = document.getElementById('chat-header-subtitle');
+  const modeIndicator = document.getElementById('mode-indicator');
   
   if (!messagesContainer || !input || !sendButton) {
     console.error('[Widget] Required elements not found');
     return;
   }
+  
+  // Create messagesEndRef for scrolling
+  const messagesEndRef = document.createElement('div');
+  messagesEndRef.style.cssText = 'height: 1px;';
   
   // Update header based on config
   if (headerTitle) {
@@ -103,6 +108,18 @@ export async function GET(request: NextRequest) {
     } else {
       headerTitle.textContent = config.title || 'REALTORS® Assistant';
       headerSubtitle.textContent = config.subtitle || 'West San Gabriel Valley';
+    }
+    
+    // Update input placeholder
+    if (chatMode === 'live' && liveChatStatus === 'pending') {
+      input.placeholder = 'Waiting for employee to join...';
+      input.disabled = true;
+    } else if (chatMode === 'live') {
+      input.placeholder = 'Type your message...';
+      input.disabled = false;
+    } else {
+      input.placeholder = 'Ask me anything...';
+      input.disabled = false;
     }
   }
   
@@ -162,7 +179,8 @@ export async function GET(request: NextRequest) {
             }
             
             addMessage('assistant', '🎉 ' + session.employeeName + ' has joined the chat! You\\'re now chatting with a human agent.');
-            startLiveChatPolling();
+      renderModeIndicator();
+      startLiveChatPolling();
           }
         }
       } catch (error) {
@@ -214,8 +232,9 @@ export async function GET(request: NextRequest) {
           previousEmployeeName = session.employeeName;
         }
         
-        // Update header
+        // Update header and mode indicator
         updateHeader();
+        renderModeIndicator();
         
         // Sync messages from server
         if (session.messages && session.messages.length > 0) {
@@ -267,34 +286,23 @@ export async function GET(request: NextRequest) {
       
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble';
-      bubble.textContent = msg.content;
+      
+      // Add employee name if present
+      if (msg.role === 'employee' && msg.employeeName) {
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'message-employee-name';
+        nameDiv.textContent = msg.employeeName;
+        bubble.appendChild(nameDiv);
+      }
+      
+      const contentDiv = document.createElement('p');
+      contentDiv.style.cssText = 'font-size: 14px; line-height: 1.5; margin: 0;';
+      contentDiv.textContent = msg.content;
+      bubble.appendChild(contentDiv);
       
       messageDiv.appendChild(bubble);
       messagesContainer.appendChild(messageDiv);
     });
-    
-    if (chatMode === 'ai' && !takenOver && messages.length > 0) {
-      const buttonContainer = document.createElement('div');
-      buttonContainer.style.cssText = 'display: flex; justify-content: center; margin: 8px 0;';
-      const talkBtn = document.createElement('button');
-      talkBtn.className = 'talk-to-human-btn';
-      talkBtn.disabled = isLoading;
-      talkBtn.innerHTML = '👤 Talk to Human Agent';
-      talkBtn.onclick = requestLiveChat;
-      buttonContainer.appendChild(talkBtn);
-      messagesContainer.appendChild(buttonContainer);
-    }
-    
-    if (chatMode === 'live') {
-      const statusDiv = document.createElement('div');
-      statusDiv.className = 'live-chat-status ' + (liveChatStatus === 'active' ? 'active' : '');
-      if (liveChatStatus === 'active' && employeeName) {
-        statusDiv.innerHTML = '✅ Connected with ' + employeeName;
-      } else {
-        statusDiv.innerHTML = '⏳ Waiting for an agent to join...';
-      }
-      messagesContainer.appendChild(statusDiv);
-    }
     
     if (isLoading) {
       const loadingDiv = document.createElement('div');
@@ -302,12 +310,84 @@ export async function GET(request: NextRequest) {
       loadingDiv.innerHTML = '<div class="loading-indicator"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
       messagesContainer.appendChild(loadingDiv);
     }
+    
+    // Add scroll anchor
+    messagesContainer.appendChild(messagesEndRef);
   }
   
   function scrollToBottom() {
     setTimeout(() => {
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      messagesEndRef.scrollIntoView({ behavior: 'smooth' });
     }, 100);
+  }
+  
+  // Function to render mode indicator
+  function renderModeIndicator() {
+    if (!modeIndicator) return;
+    
+    modeIndicator.innerHTML = '';
+    modeIndicator.className = 'mode-indicator';
+    
+    if (chatMode === 'ai') {
+      const text = document.createElement('span');
+      text.className = 'mode-indicator-text';
+      text.innerHTML = '🤖 AI Assistant';
+      
+      const button = document.createElement('button');
+      button.className = 'mode-indicator-btn';
+      button.disabled = isLoading;
+      button.innerHTML = '👥 Talk to Human';
+      button.onclick = requestLiveChat;
+      
+      modeIndicator.appendChild(text);
+      modeIndicator.appendChild(button);
+    } else if (chatMode === 'live') {
+      const text = document.createElement('span');
+      text.className = 'mode-indicator-text';
+      if (liveChatStatus === 'pending') {
+        text.innerHTML = '👥 ⏳ Waiting for employee...';
+      } else {
+        text.innerHTML = '👥 ✅ Connected' + (employeeName ? ' with ' + employeeName : '');
+      }
+      
+      const button = document.createElement('button');
+      button.className = 'mode-indicator-btn ghost';
+      button.innerHTML = 'Switch to AI';
+      button.onclick = resetToAI;
+      
+      modeIndicator.appendChild(text);
+      modeIndicator.appendChild(button);
+    }
+  }
+  
+  function resetToAI() {
+    chatMode = 'ai';
+    liveChatId = null;
+    liveChatStatus = null;
+    employeeName = null;
+    takenOver = false;
+    previousLiveChatStatus = null;
+    previousEmployeeName = null;
+    
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+    
+    // Clear messages and add greeting
+    messages = [];
+    addMessage('assistant', config.greeting);
+    updateHeader();
+    renderModeIndicator();
+    
+    // Restart AI session if needed
+    if (!aiSessionId) {
+      createAISession().then(() => {
+        startTakeoverPolling();
+      });
+    } else {
+      startTakeoverPolling();
+    }
   }
   
   async function requestLiveChat() {
@@ -332,6 +412,7 @@ export async function GET(request: NextRequest) {
       previousLiveChatStatus = session.status;
       
       updateHeader();
+      renderModeIndicator();
       addMessage('assistant', 'I\\'ve connected you with our office. An employee will be with you shortly. Please wait...');
       
       startLiveChatPolling();
@@ -424,6 +505,7 @@ export async function GET(request: NextRequest) {
   });
   
   addMessage('assistant', config.greeting);
+  renderModeIndicator();
   
   setTimeout(() => input.focus(), 100);
   
