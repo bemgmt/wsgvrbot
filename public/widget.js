@@ -144,6 +144,7 @@
 
   const header = document.createElement("div");
   header.id = "donna-widget-header";
+  // Header will be updated by the loaded UI
   header.innerHTML = `<div>Support</div>`;
   const closeBtn = document.createElement("button");
   closeBtn.id = "donna-widget-close";

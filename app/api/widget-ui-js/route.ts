@@ -71,10 +71,39 @@ export async function GET(request: NextRequest) {
   const messagesContainer = document.getElementById('chat-messages');
   const input = document.getElementById('chat-input');
   const sendButton = document.getElementById('chat-send');
+  const headerTitle = document.getElementById('chat-header-title');
+  const headerSubtitle = document.getElementById('chat-header-subtitle');
   
   if (!messagesContainer || !input || !sendButton) {
     console.error('[Widget] Required elements not found');
     return;
+  }
+  
+  // Update header based on config
+  if (headerTitle) {
+    headerTitle.textContent = config.title || 'REALTORS® Assistant';
+  }
+  if (headerSubtitle) {
+    headerSubtitle.textContent = config.subtitle || 'West San Gabriel Valley';
+  }
+  
+  // Function to update header based on chat mode
+  function updateHeader() {
+    if (!headerTitle || !headerSubtitle) return;
+    
+    if (chatMode === 'live') {
+      headerTitle.textContent = 'Live Chat';
+      if (employeeName) {
+        headerSubtitle.textContent = 'Chatting with ' + employeeName;
+      } else if (liveChatStatus === 'pending') {
+        headerSubtitle.textContent = 'Waiting for employee...';
+      } else {
+        headerSubtitle.textContent = config.subtitle || 'West San Gabriel Valley';
+      }
+    } else {
+      headerTitle.textContent = config.title || 'REALTORS® Assistant';
+      headerSubtitle.textContent = config.subtitle || 'West San Gabriel Valley';
+    }
   }
   
   let messages = [];
@@ -142,35 +171,72 @@ export async function GET(request: NextRequest) {
     }, 3000);
   }
   
-  // Poll for live chat messages
+  // Poll for live chat messages and status updates (like original)
+  let previousLiveChatStatus = null;
+  let previousEmployeeName = null;
+  
   function startLiveChatPolling() {
     if (pollInterval) clearInterval(pollInterval);
     if (chatMode !== 'live' || !liveChatId) return;
     
     const pollMessages = async () => {
       try {
-        const response = await fetch(buildApiUrl('live-chat/messages') + '?chatId=' + encodeURIComponent(liveChatId), {
+        // Poll the session endpoint to get status updates and employee info (like original)
+        const sessionResponse = await fetch(buildApiUrl('live-chat/session') + '?chatId=' + encodeURIComponent(liveChatId), {
           credentials: 'omit'
         });
-        if (response.ok) {
-          const serverMessages = await response.json();
+        if (!sessionResponse.ok) {
+          console.error('[Widget] Live chat poll failed:', sessionResponse.status);
+          return;
+        }
+        
+        const session = await sessionResponse.json();
+        
+        // Check if employee just joined (for manually requested live chats, not takeovers)
+        const wasPending = previousLiveChatStatus === 'pending';
+        const isNowActive = session.status === 'active';
+        const hasNewEmployee = session.employeeName && 
+          session.employeeName !== previousEmployeeName &&
+          !takenOver;
+        
+        if (wasPending && isNowActive && hasNewEmployee) {
+          // Employee just joined
+          addMessage('assistant', '🎉 ' + session.employeeName + ' has joined the chat! You\\'re now chatting with a human agent.');
+        }
+        
+        // Update status
+        liveChatStatus = session.status;
+        previousLiveChatStatus = session.status;
+        
+        // Update employee name if we have it
+        if (session.employeeName) {
+          employeeName = session.employeeName;
+          previousEmployeeName = session.employeeName;
+        }
+        
+        // Update header
+        updateHeader();
+        
+        // Sync messages from server
+        if (session.messages && session.messages.length > 0) {
           const existingIds = new Set(messages.map(m => m.id));
           
-          serverMessages.forEach(msg => {
+          session.messages.forEach(msg => {
             if (!existingIds.has(msg.id)) {
               const message = {
                 id: msg.id,
                 role: msg.role === 'employee' ? 'employee' : msg.role,
                 content: msg.content,
-                timestamp: new Date(msg.timestamp || Date.now())
+                timestamp: new Date(msg.timestamp || Date.now()),
+                employeeName: msg.employeeName
               };
               messages.push(message);
             }
           });
-          
-          renderMessages();
-          scrollToBottom();
         }
+        
+        renderMessages();
+        scrollToBottom();
       } catch (error) {
         console.error('[Widget] Live chat poll error:', error);
       }
@@ -263,7 +329,9 @@ export async function GET(request: NextRequest) {
       liveChatId = session.id;
       liveChatStatus = session.status;
       chatMode = 'live';
+      previousLiveChatStatus = session.status;
       
+      updateHeader();
       addMessage('assistant', 'I\\'ve connected you with our office. An employee will be with you shortly. Please wait...');
       
       startLiveChatPolling();

@@ -57,6 +57,25 @@ export async function GET(request: NextRequest) {
       background: #fff;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
+    #chat-header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #0b1220 0%, #1a2332 100%);
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+    #chat-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+      line-height: 1.2;
+    }
+    #chat-header p {
+      font-size: 13px;
+      opacity: 0.9;
+      margin: 0;
+      line-height: 1.2;
+    }
     #chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -278,6 +297,10 @@ export async function GET(request: NextRequest) {
 </head>
 <body>
   <div id="chat-container">
+    <div id="chat-header">
+      <h3 id="chat-header-title">REALTORS® Assistant</h3>
+      <p id="chat-header-subtitle">West San Gabriel Valley</p>
+    </div>
     <div id="chat-messages"></div>
     <div id="chat-input-container">
       <input
