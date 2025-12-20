@@ -42,6 +42,8 @@ export async function GET(request: NextRequest) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
   <style>
     /* WordPress-friendly scoped styles - won't conflict with theme */
     #wsgvr-chat-widget * {
@@ -317,8 +319,6 @@ export async function GET(request: NextRequest) {
       stroke-width: 3;
     }
   </style>
-</head>
-<body>
   <div id="wsgvr-chat-widget">
     <div id="wsgvr-chat-header">
       <h3 id="wsgvr-chat-header-title">REALTORS® Assistant</h3>
