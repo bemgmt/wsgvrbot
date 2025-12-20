@@ -188,28 +188,37 @@
       // Get the body content
       const bodyContent = doc.body;
       
-      // Extract scripts before moving content
+      // Extract scripts and their content before modifying DOM
       const scripts = Array.from(bodyContent.querySelectorAll('script'));
+      const scriptData = scripts.map(oldScript => ({
+        attributes: Array.from(oldScript.attributes).map(attr => ({
+          name: attr.name,
+          value: attr.value
+        })),
+        content: oldScript.textContent || oldScript.innerHTML || ''
+      }));
       
-      // Clear body and append all non-script content
-      body.innerHTML = '';
-      Array.from(bodyContent.childNodes).forEach(node => {
-        if (node.nodeName !== 'SCRIPT') {
-          body.appendChild(node.cloneNode(true));
-        }
-      });
+      // Remove all script tags from bodyContent
+      scripts.forEach(script => script.remove());
+      
+      // Set the body HTML (without scripts)
+      body.innerHTML = bodyContent.innerHTML;
       
       // Execute scripts after content is loaded
-      scripts.forEach((oldScript) => {
-        const newScript = document.createElement('script');
-        // Copy all attributes
-        Array.from(oldScript.attributes).forEach((attr) => {
-          newScript.setAttribute(attr.name, attr.value);
-        });
-        // Set script content - use textContent to avoid parsing issues
-        newScript.textContent = oldScript.textContent || '';
-        // Append to body to execute
-        body.appendChild(newScript);
+      scriptData.forEach((scriptInfo) => {
+        try {
+          const newScript = document.createElement('script');
+          // Copy all attributes
+          scriptInfo.attributes.forEach((attr) => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+          // Set script content using textContent
+          newScript.textContent = scriptInfo.content;
+          // Append to body to execute
+          body.appendChild(newScript);
+        } catch (scriptError) {
+          console.error('[Widget] Error executing script:', scriptError);
+        }
       });
     } catch (e) {
       body.innerHTML = `<div style="padding:14px;font:14px system-ui;color:#b00;">Could not load chat UI. ${String(e.message || e)}</div>`;
