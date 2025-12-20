@@ -49,6 +49,25 @@ export async function GET(request: NextRequest) {
   }
   const finalApiUrl = widgetApiUrl || apiBaseUrl;
   
+  // Helper function to build API URLs (handles double /api/ issue)
+  function buildApiUrl(path) {
+    // Remove leading slash from path if present
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    // Remove trailing slash from base URL if present
+    let cleanBase = finalApiUrl;
+    if (cleanBase.endsWith('/')) {
+      cleanBase = cleanBase.slice(0, -1);
+    }
+    // Check if base URL already ends with /api
+    if (cleanBase.endsWith('/api')) {
+      // Base already has /api, so just append the path
+      return cleanBase + '/' + cleanPath;
+    } else {
+      // Base doesn't have /api, so add it
+      return cleanBase + '/api/' + cleanPath;
+    }
+  }
+  
   const messagesContainer = document.getElementById('chat-messages');
   const input = document.getElementById('chat-input');
   const sendButton = document.getElementById('chat-send');
@@ -73,7 +92,7 @@ export async function GET(request: NextRequest) {
   // Create AI session on load
   async function createAISession() {
     try {
-      const response = await fetch(finalApiUrl + '/api/ai-chat/session', {
+      const response = await fetch(buildApiUrl('ai-chat/session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
@@ -96,7 +115,7 @@ export async function GET(request: NextRequest) {
     
     takeoverPollInterval = setInterval(async () => {
       try {
-        const response = await fetch(finalApiUrl + '/api/ai-chat/session?chatId=' + aiSessionId, {
+        const response = await fetch(buildApiUrl('ai-chat/session') + '?chatId=' + encodeURIComponent(aiSessionId), {
           credentials: 'omit'
         });
         if (response.ok) {
@@ -130,7 +149,7 @@ export async function GET(request: NextRequest) {
     
     const pollMessages = async () => {
       try {
-        const response = await fetch(finalApiUrl + '/api/live-chat/messages?chatId=' + liveChatId, {
+        const response = await fetch(buildApiUrl('live-chat/messages') + '?chatId=' + encodeURIComponent(liveChatId), {
           credentials: 'omit'
         });
         if (response.ok) {
@@ -231,7 +250,7 @@ export async function GET(request: NextRequest) {
     renderMessages();
     
     try {
-      const response = await fetch(finalApiUrl + '/api/live-chat/session', {
+      const response = await fetch(buildApiUrl('live-chat/session'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
@@ -271,7 +290,7 @@ export async function GET(request: NextRequest) {
     
     try {
       if (chatMode === 'live' && liveChatId) {
-        const response = await fetch(finalApiUrl + '/api/live-chat/messages', {
+        const response = await fetch(buildApiUrl('live-chat/messages'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -284,7 +303,7 @@ export async function GET(request: NextRequest) {
         
         if (!response.ok) throw new Error('Failed to send message');
       } else {
-        const response = await fetch(finalApiUrl + '/api/chat', {
+        const response = await fetch(buildApiUrl('chat'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

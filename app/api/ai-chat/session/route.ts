@@ -9,7 +9,7 @@ const corsHeaders = {
 }
 
 export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders })
+  return new NextResponse(null, { status: 204, headers: corsHeaders })
 }
 
 // Create a new AI chat session
