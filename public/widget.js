@@ -175,11 +175,12 @@
     }
 
     try {
-      const res = await fetch(`${cfg.api}/widget-ui?client=${encodeURIComponent(cfg.client)}`, {
+      // Load HTML without scripts (safer approach)
+      const htmlRes = await fetch(`${cfg.api}/widget-ui?client=${encodeURIComponent(cfg.client)}`, {
         credentials: "omit",
       });
-      if (!res.ok) throw new Error(`UI load failed: ${res.status}`);
-      const html = await res.text();
+      if (!htmlRes.ok) throw new Error(`UI load failed: ${htmlRes.status}`);
+      const html = await htmlRes.text();
       
       // Parse the HTML document and extract body content
       const parser = new DOMParser();
@@ -188,38 +189,58 @@
       // Get the body content
       const bodyContent = doc.body;
       
-      // Extract scripts and their content before modifying DOM
+      // Remove all script tags before setting innerHTML
       const scripts = Array.from(bodyContent.querySelectorAll('script'));
-      const scriptData = scripts.map(oldScript => ({
-        attributes: Array.from(oldScript.attributes).map(attr => ({
-          name: attr.name,
-          value: attr.value
-        })),
-        content: oldScript.textContent || oldScript.innerHTML || ''
-      }));
-      
-      // Remove all script tags from bodyContent
       scripts.forEach(script => script.remove());
       
       // Set the body HTML (without scripts)
       body.innerHTML = bodyContent.innerHTML;
       
-      // Execute scripts after content is loaded
-      scriptData.forEach((scriptInfo) => {
-        try {
-          const newScript = document.createElement('script');
-          // Copy all attributes
-          scriptInfo.attributes.forEach((attr) => {
-            newScript.setAttribute(attr.name, attr.value);
+      // Load and execute JavaScript separately (alternative approach)
+      // This avoids template literal parsing issues
+      try {
+        const jsRes = await fetch(`${cfg.api}/widget-ui-js?client=${encodeURIComponent(cfg.client)}`, {
+          credentials: "omit",
+        });
+        if (jsRes.ok) {
+          const jsCode = await jsRes.text();
+          // Execute the JavaScript
+          const script = document.createElement('script');
+          script.textContent = jsCode;
+          body.appendChild(script);
+        } else {
+          // Fallback: try to extract and execute scripts from HTML
+          const originalScripts = Array.from(doc.body.querySelectorAll('script'));
+          originalScripts.forEach((oldScript) => {
+            try {
+              const newScript = document.createElement('script');
+              Array.from(oldScript.attributes).forEach((attr) => {
+                newScript.setAttribute(attr.name, attr.value);
+              });
+              newScript.textContent = oldScript.textContent || oldScript.innerHTML || '';
+              body.appendChild(newScript);
+            } catch (scriptError) {
+              console.error('[Widget] Error executing script:', scriptError);
+            }
           });
-          // Set script content using textContent
-          newScript.textContent = scriptInfo.content;
-          // Append to body to execute
-          body.appendChild(newScript);
-        } catch (scriptError) {
-          console.error('[Widget] Error executing script:', scriptError);
         }
-      });
+      } catch (jsError) {
+        console.error('[Widget] Failed to load separate JS, trying inline scripts:', jsError);
+        // Fallback to inline scripts if separate JS fails
+        const originalScripts = Array.from(doc.body.querySelectorAll('script'));
+        originalScripts.forEach((oldScript) => {
+          try {
+            const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach((attr) => {
+              newScript.setAttribute(attr.name, attr.value);
+            });
+            newScript.textContent = oldScript.textContent || oldScript.innerHTML || '';
+            body.appendChild(newScript);
+          } catch (scriptError) {
+            console.error('[Widget] Error executing script:', scriptError);
+          }
+        });
+      }
     } catch (e) {
       body.innerHTML = `<div style="padding:14px;font:14px system-ui;color:#b00;">Could not load chat UI. ${String(e.message || e)}</div>`;
     }
