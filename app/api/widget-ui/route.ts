@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       console.warn("[Widget UI] Failed to fetch config, using defaults:", configError)
     }
 
-    // Return HTML with inline JavaScript for the chat UI
+    // Return HTML with inline JavaScript for the chat UI - WordPress-friendly, optimized for older users
     const html = `
 <!DOCTYPE html>
 <html>
@@ -43,17 +43,15 @@ export async function GET(request: NextRequest) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * {
+    /* WordPress-friendly scoped styles - won't conflict with theme */
+    #wsgvr-chat-widget * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    #wsgvr-chat-widget {
+      font-family: Arial, Helvetica, sans-serif;
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    #chat-container {
       width: 100%;
       height: 100%;
       display: flex;
@@ -61,280 +59,282 @@ export async function GET(request: NextRequest) {
       background: #ffffff;
       overflow: hidden;
     }
-    #chat-header {
-      padding: 18px 20px;
+    #wsgvr-chat-header {
+      padding: 22px 24px;
       background: #1e5a96;
       color: #ffffff;
       flex-shrink: 0;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-bottom: 3px solid #0d4a7a;
     }
-    #chat-header h3 {
-      font-size: 17px;
-      font-weight: 600;
-      margin: 0 0 3px 0;
+    #wsgvr-chat-header h3 {
+      font-size: 22px;
+      font-weight: bold;
+      margin: 0 0 6px 0;
       line-height: 1.3;
-      letter-spacing: -0.01em;
+      color: #ffffff;
     }
-    #chat-header p {
-      font-size: 13px;
-      opacity: 0.95;
+    #wsgvr-chat-header p {
+      font-size: 16px;
       margin: 0;
       line-height: 1.4;
-      font-weight: 400;
+      color: #ffffff;
+      opacity: 0.95;
     }
-    #mode-indicator {
-      border-bottom: 1px solid #e8e8e8;
-      padding: 10px 16px;
-      background: #fafafa;
+    #wsgvr-mode-indicator {
+      border-bottom: 2px solid #cccccc;
+      padding: 16px 20px;
+      background: #f5f5f5;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
     }
-    .mode-indicator-text {
-      font-size: 12px;
-      color: #555555;
+    .wsgvr-mode-text {
+      font-size: 15px;
+      color: #333333;
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-weight: 500;
+      gap: 8px;
+      font-weight: 600;
     }
-    .mode-indicator-btn {
-      font-size: 11px;
-      height: 28px;
-      padding: 0 12px;
-      border: 1px solid #d0d0d0;
+    .wsgvr-mode-btn {
+      font-size: 15px;
+      min-height: 44px;
+      padding: 12px 20px;
+      border: 2px solid #1e5a96;
       border-radius: 6px;
       background: #ffffff;
       color: #1e5a96;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background 0.2s;
       display: flex;
       align-items: center;
-      gap: 5px;
-      font-weight: 500;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      gap: 8px;
+      font-weight: 600;
+      text-decoration: none;
     }
-    .mode-indicator-btn:hover:not(:disabled) {
-      background: #f5f5f5;
-      border-color: #1e5a96;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    .wsgvr-mode-btn:hover:not(:disabled) {
+      background: #1e5a96;
+      color: #ffffff;
     }
-    .mode-indicator-btn:active:not(:disabled) {
-      transform: translateY(0);
+    .wsgvr-mode-btn:focus {
+      outline: 3px solid #ff9900;
+      outline-offset: 2px;
     }
-    .mode-indicator-btn:disabled {
-      opacity: 0.5;
+    .wsgvr-mode-btn:disabled {
+      opacity: 0.6;
       cursor: not-allowed;
     }
-    .mode-indicator-btn.ghost {
-      border: none;
+    .wsgvr-mode-btn.ghost {
+      border: 2px solid #666666;
       background: transparent;
       color: #666666;
-      box-shadow: none;
     }
-    .mode-indicator-btn.ghost:hover:not(:disabled) {
-      background: rgba(0, 0, 0, 0.05);
-      transform: none;
+    .wsgvr-mode-btn.ghost:hover:not(:disabled) {
+      background: #f0f0f0;
+      border-color: #333333;
+      color: #333333;
     }
-    #chat-messages {
+    #wsgvr-chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 16px;
-      background: #f8f9fa;
+      padding: 20px;
+      background: #f9f9f9;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
       scroll-behavior: smooth;
     }
-    #chat-messages::-webkit-scrollbar {
-      width: 6px;
+    #wsgvr-chat-messages::-webkit-scrollbar {
+      width: 12px;
     }
-    #chat-messages::-webkit-scrollbar-track {
-      background: transparent;
+    #wsgvr-chat-messages::-webkit-scrollbar-track {
+      background: #e0e0e0;
     }
-    #chat-messages::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 3px;
+    #wsgvr-chat-messages::-webkit-scrollbar-thumb {
+      background: #1e5a96;
+      border-radius: 6px;
     }
-    #chat-messages::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+    #wsgvr-chat-messages::-webkit-scrollbar-thumb:hover {
+      background: #0d4a7a;
     }
-    .message {
+    .wsgvr-message {
       display: flex;
-      animation: fadeIn 0.25s ease-out;
+      animation: wsgvr-fadeIn 0.3s ease-out;
     }
-    .message.user {
+    .wsgvr-message.user {
       justify-content: flex-end;
     }
-    .message.assistant, .message.employee {
+    .wsgvr-message.assistant, .wsgvr-message.employee {
       justify-content: flex-start;
     }
-    .message-bubble {
-      max-width: 75%;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 14px;
-      line-height: 1.5;
+    .wsgvr-message-bubble {
+      max-width: 80%;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 16px;
+      line-height: 1.6;
       word-wrap: break-word;
       white-space: pre-wrap;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      border: 2px solid transparent;
     }
-    .message.user .message-bubble {
+    .wsgvr-message.user .wsgvr-message-bubble {
       background: #1e5a96;
       color: #ffffff;
-      border-bottom-right-radius: 4px;
+      border-color: #0d4a7a;
     }
-    .message.assistant .message-bubble {
+    .wsgvr-message.assistant .wsgvr-message-bubble {
       background: #ffffff;
-      color: #333333;
-      border: 1px solid #e8e8e8;
-      border-bottom-left-radius: 4px;
+      color: #000000;
+      border: 2px solid #cccccc;
     }
-    .message.employee .message-bubble {
+    .wsgvr-message.employee .wsgvr-message-bubble {
       background: #1e5a96;
       color: #ffffff;
-      border-bottom-left-radius: 4px;
-      opacity: 0.95;
+      border-color: #0d4a7a;
     }
-    .message-employee-name {
-      font-size: 11px;
-      font-weight: 600;
-      margin-bottom: 4px;
-      opacity: 0.9;
+    .wsgvr-employee-name {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 6px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
     }
-    .loading-indicator {
+    .wsgvr-loading-indicator {
       display: flex;
-      gap: 6px;
-      padding: 10px 14px;
+      gap: 8px;
+      padding: 14px 18px;
       background: #ffffff;
-      border: 1px solid #e8e8e8;
-      border-radius: 12px;
-      border-bottom-left-radius: 4px;
-      max-width: 70px;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      border: 2px solid #cccccc;
+      border-radius: 8px;
+      max-width: 90px;
     }
-    .loading-dot {
-      width: 7px;
-      height: 7px;
+    .wsgvr-loading-dot {
+      width: 12px;
+      height: 12px;
       background: #1e5a96;
       border-radius: 50%;
-      animation: bounce 1.4s infinite ease-in-out;
+      animation: wsgvr-bounce 1.4s infinite ease-in-out;
     }
-    .loading-dot:nth-child(1) {
+    .wsgvr-loading-dot:nth-child(1) {
       animation-delay: -0.32s;
     }
-    .loading-dot:nth-child(2) {
+    .wsgvr-loading-dot:nth-child(2) {
       animation-delay: -0.16s;
     }
-    @keyframes bounce {
+    @keyframes wsgvr-bounce {
       0%, 80%, 100% {
-        transform: scale(0.7);
-        opacity: 0.6;
+        transform: scale(0.8);
+        opacity: 0.7;
       }
       40% {
         transform: scale(1);
         opacity: 1;
       }
     }
-    @keyframes fadeIn {
+    @keyframes wsgvr-fadeIn {
       from {
         opacity: 0;
-        transform: translateY(6px);
+        transform: translateY(8px);
       }
       to {
         opacity: 1;
         transform: translateY(0);
       }
     }
-    #chat-input-container {
-      border-top: 1px solid #e8e8e8;
-      padding: 14px 16px;
+    #wsgvr-chat-input-container {
+      border-top: 3px solid #cccccc;
+      padding: 18px 20px;
       background: #ffffff;
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-shrink: 0;
       align-items: center;
     }
-    #chat-input {
+    #wsgvr-chat-input {
       flex: 1;
-      padding: 10px 14px;
-      border: 1px solid #d0d0d0;
-      border-radius: 8px;
-      font-size: 14px;
-      font-family: inherit;
+      padding: 14px 18px;
+      border: 2px solid #cccccc;
+      border-radius: 6px;
+      font-size: 16px;
+      font-family: Arial, Helvetica, sans-serif;
       outline: none;
-      transition: all 0.2s ease;
+      transition: border-color 0.2s;
       background: #ffffff;
-      color: #333333;
+      color: #000000;
+      min-height: 50px;
     }
-    #chat-input:focus {
+    #wsgvr-chat-input:focus {
       border-color: #1e5a96;
-      box-shadow: 0 0 0 3px rgba(30, 90, 150, 0.1);
+      border-width: 3px;
+      box-shadow: 0 0 0 3px rgba(30, 90, 150, 0.2);
     }
-    #chat-input:disabled {
-      background: #f5f5f5;
+    #wsgvr-chat-input:disabled {
+      background: #f0f0f0;
       cursor: not-allowed;
-      opacity: 0.6;
+      opacity: 0.7;
     }
-    #chat-input::placeholder {
-      color: #999999;
+    #wsgvr-chat-input::placeholder {
+      color: #666666;
+      font-size: 16px;
     }
-    #chat-send {
-      width: 40px;
-      height: 40px;
+    #wsgvr-chat-send {
+      min-width: 56px;
+      min-height: 56px;
       padding: 0;
       background: #ff9900;
       color: #ffffff;
-      border: none;
-      border-radius: 8px;
+      border: 3px solid #e68900;
+      border-radius: 6px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      box-shadow: 0 2px 4px rgba(255, 153, 0, 0.3);
+      font-weight: bold;
     }
-    #chat-send:hover:not(:disabled) {
+    #wsgvr-chat-send:hover:not(:disabled) {
       background: #e68900;
-      transform: translateY(-1px);
-      box-shadow: 0 3px 6px rgba(255, 153, 0, 0.4);
+      border-color: #cc7700;
+      transform: scale(1.05);
     }
-    #chat-send:active:not(:disabled) {
-      transform: translateY(0);
+    #wsgvr-chat-send:focus {
+      outline: 3px solid #ff9900;
+      outline-offset: 3px;
     }
-    #chat-send:disabled {
-      opacity: 0.5;
+    #wsgvr-chat-send:active:not(:disabled) {
+      transform: scale(1);
+    }
+    #wsgvr-chat-send:disabled {
+      opacity: 0.6;
       cursor: not-allowed;
       transform: none;
     }
-    #chat-send svg {
-      width: 18px;
-      height: 18px;
-      stroke-width: 2.5;
+    #wsgvr-chat-send svg {
+      width: 24px;
+      height: 24px;
+      stroke-width: 3;
     }
   </style>
 </head>
 <body>
-  <div id="chat-container">
-    <div id="chat-header">
-      <h3 id="chat-header-title">REALTORS® Assistant</h3>
-      <p id="chat-header-subtitle">West San Gabriel Valley</p>
+  <div id="wsgvr-chat-widget">
+    <div id="wsgvr-chat-header">
+      <h3 id="wsgvr-chat-header-title">REALTORS® Assistant</h3>
+      <p id="wsgvr-chat-header-subtitle">West San Gabriel Valley</p>
     </div>
-    <div id="mode-indicator"></div>
-    <div id="chat-messages"></div>
-    <div id="chat-input-container">
+    <div id="wsgvr-mode-indicator"></div>
+    <div id="wsgvr-chat-messages"></div>
+    <div id="wsgvr-chat-input-container">
       <input
         type="text"
-        id="chat-input"
+        id="wsgvr-chat-input"
         placeholder="Ask me anything..."
         autocomplete="off"
+        aria-label="Type your message"
       />
-      <button id="chat-send" type="button" aria-label="Send message">
+      <button id="wsgvr-chat-send" type="button" aria-label="Send message">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -346,12 +346,12 @@ export async function GET(request: NextRequest) {
     (function() {
       const config = ${JSON.stringify(config)};
       const apiBaseUrl = window.location.origin;
-      const messagesContainer = document.getElementById('chat-messages');
-      const input = document.getElementById('chat-input');
-      const sendButton = document.getElementById('chat-send');
-      const headerTitle = document.getElementById('chat-header-title');
-      const headerSubtitle = document.getElementById('chat-header-subtitle');
-      const modeIndicator = document.getElementById('mode-indicator');
+      const messagesContainer = document.getElementById('wsgvr-chat-messages');
+      const input = document.getElementById('wsgvr-chat-input');
+      const sendButton = document.getElementById('wsgvr-chat-send');
+      const headerTitle = document.getElementById('wsgvr-chat-header-title');
+      const headerSubtitle = document.getElementById('wsgvr-chat-header-subtitle');
+      const modeIndicator = document.getElementById('wsgvr-mode-indicator');
       
       if (!messagesContainer || !input || !sendButton) {
         console.error('[Widget] Required elements not found');
@@ -397,20 +397,21 @@ export async function GET(request: NextRequest) {
         
         if (chatMode === 'ai') {
           const text = document.createElement('span');
-          text.className = 'mode-indicator-text';
+          text.className = 'wsgvr-mode-text';
           text.innerHTML = '🤖 AI Assistant';
           
           const button = document.createElement('button');
-          button.className = 'mode-indicator-btn';
+          button.className = 'wsgvr-mode-btn';
           button.disabled = isLoading;
           button.innerHTML = '👥 Talk to Human';
           button.onclick = requestLiveChat;
+          button.setAttribute('aria-label', 'Talk to a human agent');
           
           modeIndicator.appendChild(text);
           modeIndicator.appendChild(button);
         } else if (chatMode === 'live') {
           const text = document.createElement('span');
-          text.className = 'mode-indicator-text';
+          text.className = 'wsgvr-mode-text';
           if (liveChatStatus === 'pending') {
             text.innerHTML = '👥 ⏳ Waiting for employee...';
           } else {
@@ -418,9 +419,10 @@ export async function GET(request: NextRequest) {
           }
           
           const button = document.createElement('button');
-          button.className = 'mode-indicator-btn ghost';
+          button.className = 'wsgvr-mode-btn ghost';
           button.innerHTML = 'Switch to AI';
           button.onclick = resetToAI;
+          button.setAttribute('aria-label', 'Switch back to AI assistant');
           
           modeIndicator.appendChild(text);
           modeIndicator.appendChild(button);
@@ -629,14 +631,14 @@ export async function GET(request: NextRequest) {
         
         messages.forEach(msg => {
           const messageDiv = document.createElement('div');
-          messageDiv.className = 'message ' + msg.role;
+          messageDiv.className = 'wsgvr-message ' + msg.role;
           
           const bubble = document.createElement('div');
-          bubble.className = 'message-bubble';
+          bubble.className = 'wsgvr-message-bubble';
           
           if (msg.role === 'employee' && msg.employeeName) {
             const nameDiv = document.createElement('div');
-            nameDiv.className = 'message-employee-name';
+            nameDiv.className = 'wsgvr-employee-name';
             nameDiv.textContent = msg.employeeName;
             bubble.appendChild(nameDiv);
           }
@@ -651,8 +653,8 @@ export async function GET(request: NextRequest) {
         
         if (isLoading) {
           const loadingDiv = document.createElement('div');
-          loadingDiv.className = 'message assistant';
-          loadingDiv.innerHTML = '<div class="loading-indicator"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
+          loadingDiv.className = 'wsgvr-message assistant';
+          loadingDiv.innerHTML = '<div class="wsgvr-loading-indicator"><div class="wsgvr-loading-dot"></div><div class="wsgvr-loading-dot"></div><div class="wsgvr-loading-dot"></div></div>';
           messagesContainer.appendChild(loadingDiv);
         }
       }

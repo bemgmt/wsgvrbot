@@ -68,12 +68,12 @@ export async function GET(request: NextRequest) {
     }
   }
   
-  const messagesContainer = document.getElementById('chat-messages');
-  const input = document.getElementById('chat-input');
-  const sendButton = document.getElementById('chat-send');
-  const headerTitle = document.getElementById('chat-header-title');
-  const headerSubtitle = document.getElementById('chat-header-subtitle');
-  const modeIndicator = document.getElementById('mode-indicator');
+  const messagesContainer = document.getElementById('wsgvr-chat-messages');
+  const input = document.getElementById('wsgvr-chat-input');
+  const sendButton = document.getElementById('wsgvr-chat-send');
+  const headerTitle = document.getElementById('wsgvr-chat-header-title');
+  const headerSubtitle = document.getElementById('wsgvr-chat-header-subtitle');
+  const modeIndicator = document.getElementById('wsgvr-mode-indicator');
   
   if (!messagesContainer || !input || !sendButton) {
     console.error('[Widget] Required elements not found');
@@ -282,15 +282,15 @@ export async function GET(request: NextRequest) {
     
     messages.forEach(msg => {
       const messageDiv = document.createElement('div');
-      messageDiv.className = 'message ' + msg.role;
+      messageDiv.className = 'wsgvr-message ' + msg.role;
       
       const bubble = document.createElement('div');
-      bubble.className = 'message-bubble';
+      bubble.className = 'wsgvr-message-bubble';
       
       // Add employee name if present
       if (msg.role === 'employee' && msg.employeeName) {
         const nameDiv = document.createElement('div');
-        nameDiv.className = 'message-employee-name';
+        nameDiv.className = 'wsgvr-employee-name';
         nameDiv.textContent = msg.employeeName;
         bubble.appendChild(nameDiv);
       }
@@ -305,8 +305,8 @@ export async function GET(request: NextRequest) {
     
     if (isLoading) {
       const loadingDiv = document.createElement('div');
-      loadingDiv.className = 'message assistant';
-      loadingDiv.innerHTML = '<div class="loading-indicator"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
+      loadingDiv.className = 'wsgvr-message assistant';
+      loadingDiv.innerHTML = '<div class="wsgvr-loading-indicator"><div class="wsgvr-loading-dot"></div><div class="wsgvr-loading-dot"></div><div class="wsgvr-loading-dot"></div></div>';
       messagesContainer.appendChild(loadingDiv);
     }
     
@@ -325,24 +325,24 @@ export async function GET(request: NextRequest) {
     if (!modeIndicator) return;
     
     modeIndicator.innerHTML = '';
-    modeIndicator.className = 'mode-indicator';
     
     if (chatMode === 'ai') {
       const text = document.createElement('span');
-      text.className = 'mode-indicator-text';
+      text.className = 'wsgvr-mode-text';
       text.innerHTML = '🤖 AI Assistant';
       
       const button = document.createElement('button');
-      button.className = 'mode-indicator-btn';
+      button.className = 'wsgvr-mode-btn';
       button.disabled = isLoading;
       button.innerHTML = '👥 Talk to Human';
       button.onclick = requestLiveChat;
+      button.setAttribute('aria-label', 'Talk to a human agent');
       
       modeIndicator.appendChild(text);
       modeIndicator.appendChild(button);
     } else if (chatMode === 'live') {
       const text = document.createElement('span');
-      text.className = 'mode-indicator-text';
+      text.className = 'wsgvr-mode-text';
       if (liveChatStatus === 'pending') {
         text.innerHTML = '👥 ⏳ Waiting for employee...';
       } else {
@@ -350,9 +350,10 @@ export async function GET(request: NextRequest) {
       }
       
       const button = document.createElement('button');
-      button.className = 'mode-indicator-btn ghost';
+      button.className = 'wsgvr-mode-btn ghost';
       button.innerHTML = 'Switch to AI';
       button.onclick = resetToAI;
+      button.setAttribute('aria-label', 'Switch back to AI assistant');
       
       modeIndicator.appendChild(text);
       modeIndicator.appendChild(button);
