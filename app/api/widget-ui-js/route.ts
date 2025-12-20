@@ -295,8 +295,7 @@ export async function GET(request: NextRequest) {
         bubble.appendChild(nameDiv);
       }
       
-      const contentDiv = document.createElement('p');
-      contentDiv.style.cssText = 'font-size: 14px; line-height: 1.5; margin: 0;';
+      const contentDiv = document.createElement('div');
       contentDiv.textContent = msg.content;
       bubble.appendChild(contentDiv);
       
