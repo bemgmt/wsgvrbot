@@ -180,17 +180,36 @@
       });
       if (!res.ok) throw new Error(`UI load failed: ${res.status}`);
       const html = await res.text();
-      body.innerHTML = html;
       
-      // Execute any scripts in the loaded HTML
-      const scripts = body.querySelectorAll('script');
+      // Parse the HTML document and extract body content
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      // Get the body content
+      const bodyContent = doc.body;
+      
+      // Extract scripts before moving content
+      const scripts = Array.from(bodyContent.querySelectorAll('script'));
+      
+      // Clear body and append all non-script content
+      body.innerHTML = '';
+      Array.from(bodyContent.childNodes).forEach(node => {
+        if (node.nodeName !== 'SCRIPT') {
+          body.appendChild(node.cloneNode(true));
+        }
+      });
+      
+      // Execute scripts after content is loaded
       scripts.forEach((oldScript) => {
         const newScript = document.createElement('script');
+        // Copy all attributes
         Array.from(oldScript.attributes).forEach((attr) => {
           newScript.setAttribute(attr.name, attr.value);
         });
-        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-        oldScript.parentNode.replaceChild(newScript, oldScript);
+        // Set script content - use textContent to avoid parsing issues
+        newScript.textContent = oldScript.textContent || '';
+        // Append to body to execute
+        body.appendChild(newScript);
       });
     } catch (e) {
       body.innerHTML = `<div style="padding:14px;font:14px system-ui;color:#b00;">Could not load chat UI. ${String(e.message || e)}</div>`;
