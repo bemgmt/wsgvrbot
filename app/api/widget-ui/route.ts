@@ -171,9 +171,10 @@ export async function GET(request: NextRequest) {
       display: flex;
       align-items: center;
       gap: 4px;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
     .mode-indicator-btn:hover:not(:disabled) {
-      background: #f8f8f8;
+      background: #f5f5f5;
     }
     .mode-indicator-btn:disabled {
       opacity: 0.5;
@@ -296,7 +297,7 @@ export async function GET(request: NextRequest) {
       <input
         type="text"
         id="chat-input"
-        placeholder="Type your message..."
+        placeholder="Ask me anything..."
         autocomplete="off"
       />
       <button id="chat-send" type="button" aria-label="Send message">

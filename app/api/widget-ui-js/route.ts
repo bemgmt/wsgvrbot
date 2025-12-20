@@ -504,6 +504,8 @@ export async function GET(request: NextRequest) {
     startTakeoverPolling();
   });
   
+  // Initialize header and placeholder
+  updateHeader();
   addMessage('assistant', config.greeting);
   renderModeIndicator();
   
